@@ -27,7 +27,7 @@ def ingest():
     data = data[data['SentimentText'].isnull() == False]
     data.reset_index(inplace=True)
     data.drop('index', axis=1, inplace=True)
-    print 'dataset loaded with shape', data.shape    
+    print ('dataset loaded with shape' + data.shape)
     return data
 
 data = ingest()
@@ -69,9 +69,6 @@ x_train = labelizeTweets(x_train, 'TRAIN')
 x_test = labelizeTweets(x_test, 'TEST')
 
 x_train[0]
-
-Out[13]:
-TaggedDocument(words=[u'thank', u'you', u'!', u'im', u'just', u'a', u'tad', u'sad', u'u', u'r', u'off', u'the', u'market', u'tho', u'...'], tags=['TRAIN_0'])
 
 
 tweet_w2v = Word2Vec(size=n_dim, min_count=10)
