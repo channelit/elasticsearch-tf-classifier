@@ -2,6 +2,11 @@ version: '2'
 services:
   python:
     image: cithub/tensorflow
+    container_name: python
+    environment:
+      - PASSWORD=password
+    volumes:
+      - ./data/tensorflow:/data
     ports:
       - 6006:6006
       - 8888:8888
@@ -21,8 +26,8 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
-      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
+      - ./data/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./data/elasticsearch/logs:/usr/share/elasticsearch/logs
     ports:
       - 9200:9200
       - 9300:9300
@@ -33,8 +38,8 @@ services:
     image: docker.elastic.co/kibana/kibana-oss:6.1.1
     container_name: kibana
     volumes:
-      - ./kibana/data:/usr/share/kibana/data
-      - ./kibana/logs:/usr/share/kibana/logs
+      - ./data/kibana/data:/usr/share/kibana/data
+      - ./data/kibana/logs:/usr/share/kibana/logs
     ports:
       - 5601:5601
     networks:
