@@ -1,6 +1,6 @@
 from elasticsearch import Elasticsearch
-
 import nltk
+
 nltk.download('punkt')
 
 from nltk.tokenize import word_tokenize
@@ -27,22 +27,44 @@ def tokenize(text):
     except:
         return 'NC'
 
-def tokens():
-    tokens = []
-    res = es.search(index="intelligence", body={"query": {"match_all": {}}})
+def docs():
+    docs = []
+    res = es.search(index="intelligence", size=15, body={"query": {"match_all": {}}})
     print("Got %d Hits:" % res['hits']['total'])
     for hit in res['hits']['hits']:
         # print("%(category)s %(text)s" % hit["_source"])
         text = hit["_source"]["text"][0]
         text = text.replace('\\n', ' ')
-        tokens.append(tokenize(text))
+        docs.append(text)
+    return docs
+
+def tokens(docs):
+    tokens = []
+    for doc in docs:
+        tokens.append(tokenize(doc))
     return tokens
 
-tokens = tokens()
+docs = docs()
+tokens = tokens(docs)
 
 import gensim
 model = gensim.models.Word2Vec(tokens, size=100)
 
-model.most_similar(positive=['algorithm'])
+model.most_similar(positive=['method'])
 
-w2v = dict(zip(model.wv.index2word, model.wv.syn0))
+w2v = model.wv
+# w2v = dict(zip(model.wv.index2word, model.wv.syn0))
+
+
+LabeledSentence = gensim.models.doc2vec.LabeledSentence
+def labels(docs, label_type):
+    labelized = []
+    for i,v in tqdm(enumerate(tweets)):
+        label = '%s_%s'%(label_type,i)
+        labelized.append(LabeledSentence(v, [label]))
+    return labelized
+
+x_train = labelizeTweets(x_train, 'TRAIN')
+x_test = labelizeTweets(x_test, 'TEST')
+
+x_train[0]

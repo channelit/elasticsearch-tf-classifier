@@ -1,80 +1,146 @@
-import pandas as pd # provide sql-like data manipulation tools. very handy.
-pd.options.mode.c
-hained_assignment = None
-import numpy as np # high dimensional vector computing library.
-from copy import deepcopy
-from string import punctuation
-from random import shuffle
+'''This script loads pre-trained word embeddings (GloVe embeddings)
+into a frozen Keras Embedding layer, and uses it to
+train a text classification model on the 20 Newsgroup dataset
+(classification of newsgroup messages into 20 different categories).
 
-import gensim
-from gensim.models.word2vec import Word2Vec # the word2vec model gensim class
-LabeledSentence = gensim.models.doc2vec.LabeledSentence # we'll talk about this down below
+GloVe embedding data can be found at:
+http://nlp.stanford.edu/data/glove.6B.zip
+(source page: http://nlp.stanford.edu/projects/glove/)
 
-from tqdm import tqdm
-tqdm.pandas(desc="progress-bar")
+20 Newsgroup data can be found at:
+http://www.cs.cmu.edu/afs/cs.cmu.edu/project/theo-20/www/data/news20.html
+'''
 
-from nltk.tokenize import TweetTokenizer # a tweet tokenizer from nltk.
-tokenizer = TweetTokenizer()
-
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-def ingest():
-    data = pd.read_csv('./tweets.csv')
-    data.drop(['ItemID', 'SentimentSource'], axis=1, inplace=True)
-    data = data[data.Sentiment.isnull() == False]
-    data['Sentiment'] = data['Sentiment'].map(int)
-    data = data[data['SentimentText'].isnull() == False]
-    data.reset_index(inplace=True)
-    data.drop('index', axis=1, inplace=True)
-    print ('dataset loaded with shape' + data.shape)
-    return data
-
-data = ingest()
-data.head(5)
-
-def tokenize(tweet):
-    try:
-        tweet = unicode(tweet.decode('utf-8').lower())
-        tokens = tokenizer.tokenize(tweet)
-        tokens = filter(lambda t: not t.startswith('@'), tokens)
-        tokens = filter(lambda t: not t.startswith('#'), tokens)
-        tokens = filter(lambda t: not t.startswith('http'), tokens)
-        return tokens
-    except:
-        return 'NC'
-
-def postprocess(data, n=1000000):
-    data = data.head(n)
-    data['tokens'] = data['SentimentText'].progress_map(tokenize)  ## progress_map is a variant of the map function plus a progress bar. Handy to monitor DataFrame creations.
-    data = data[data.tokens != 'NC']
-    data.reset_index(inplace=True)
-    data.drop('index', inplace=True, axis=1)
-    return data
-
-data = postprocess(data)
-
-x_train, x_test, y_train, y_test = train_test_split(np.array(data.head(n).tokens),
-                                                    np.array(data.head(n).Sentiment), test_size=0.2)
+import os
+import sys
+import numpy as np
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
+from keras.layers import Dense, Input, GlobalMaxPooling1D
+from keras.layers import Conv1D, MaxPooling1D, Embedding
+from keras.models import Model
 
 
-def labelizeTweets(tweets, label_type):
-    labelized = []
-    for i,v in tqdm(enumerate(tweets)):
-        label = '%s_%s'%(label_type,i)
-        labelized.append(LabeledSentence(v, [label]))
-    return labelized
+BASE_DIR = '/glove'
+GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
+TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
+MAX_SEQUENCE_LENGTH = 1000
+MAX_NUM_WORDS = 20000
+EMBEDDING_DIM = 100
+VALIDATION_SPLIT = 0.2
 
-x_train = labelizeTweets(x_train, 'TRAIN')
-x_test = labelizeTweets(x_test, 'TEST')
+# first, build index mapping words in the embeddings set
+# to their embedding vector
 
-x_train[0]
+print('Indexing word vectors.')
 
+embeddings_index = {}
+f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'), 'rt', encoding='utf8')
+for line in f:
+    values = line.split()
+    word = values[0]
+    coefs = np.asarray(values[1:], dtype='float32')
+    embeddings_index[word] = coefs
+f.close()
 
-tweet_w2v = Word2Vec(size=n_dim, min_count=10)
-tweet_w2v.build_vocab([x.words for x in tqdm(x_train)])
-tweet_w2v.train([x.words for x in tqdm(x_train)])
+print('Found %s word vectors.' % len(embeddings_index))
 
+# second, prepare text samples and their labels
+print('Processing text dataset')
 
-tweet_w2v['good']
+texts = []  # list of text samples
+labels_index = {}  # dictionary mapping label name to numeric id
+labels = []  # list of label ids
+for name in sorted(os.listdir(TEXT_DATA_DIR)):
+    path = os.path.join(TEXT_DATA_DIR, name)
+    if os.path.isdir(path):
+        label_id = len(labels_index)
+        labels_index[name] = label_id
+        for fname in sorted(os.listdir(path)):
+            if fname.isdigit():
+                fpath = os.path.join(path, fname)
+                if sys.version_info < (3,):
+                    f = open(fpath)
+                else:
+                    f = open(fpath, encoding='latin-1')
+                t = f.read()
+                i = t.find('\n\n')  # skip header
+                if 0 < i:
+                    t = t[i:]
+                texts.append(t)
+                f.close()
+                labels.append(label_id)
 
+print('Found %s texts.' % len(texts))
+
+# finally, vectorize the text samples into a 2D integer tensor
+tokenizer = Tokenizer(num_words=MAX_NUM_WORDS)
+tokenizer.fit_on_texts(texts)
+sequences = tokenizer.texts_to_sequences(texts)
+
+word_index = tokenizer.word_index
+print('Found %s unique tokens.' % len(word_index))
+
+data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
+
+labels = to_categorical(np.asarray(labels))
+print('Shape of data tensor:', data.shape)
+print('Shape of label tensor:', labels.shape)
+
+# split the data into a training set and a validation set
+indices = np.arange(data.shape[0])
+np.random.shuffle(indices)
+data = data[indices]
+labels = labels[indices]
+num_validation_samples = int(VALIDATION_SPLIT * data.shape[0])
+
+x_train = data[:-num_validation_samples]
+y_train = labels[:-num_validation_samples]
+x_val = data[-num_validation_samples:]
+y_val = labels[-num_validation_samples:]
+
+print('Preparing embedding matrix.')
+
+# prepare embedding matrix
+num_words = min(MAX_NUM_WORDS, len(word_index))
+embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
+for word, i in word_index.items():
+    if i >= MAX_NUM_WORDS:
+        continue
+    embedding_vector = embeddings_index.get(word)
+    if embedding_vector is not None:
+        # words not found in embedding index will be all-zeros.
+        embedding_matrix[i] = embedding_vector
+
+# load pre-trained word embeddings into an Embedding layer
+# note that we set trainable = False so as to keep the embeddings fixed
+embedding_layer = Embedding(num_words,
+                            EMBEDDING_DIM,
+                            weights=[embedding_matrix],
+                            input_length=MAX_SEQUENCE_LENGTH,
+                            trainable=False)
+
+print('Training model.')
+
+# train a 1D convnet with global maxpooling
+sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+embedded_sequences = embedding_layer(sequence_input)
+x = Conv1D(128, 5, activation='relu')(embedded_sequences)
+x = MaxPooling1D(5)(x)
+x = Conv1D(128, 5, activation='relu')(x)
+x = MaxPooling1D(5)(x)
+x = Conv1D(128, 5, activation='relu')(x)
+x = GlobalMaxPooling1D()(x)
+x = Dense(128, activation='relu')(x)
+preds = Dense(len(labels_index), activation='softmax')(x)
+
+model = Model(sequence_input, preds)
+model.compile(loss='categorical_crossentropy',
+              optimizer='rmsprop',
+              metrics=['acc'])
+
+model.fit(x_train, y_train,
+          batch_size=128,
+          epochs=10,
+          validation_data=(x_val, y_val))
