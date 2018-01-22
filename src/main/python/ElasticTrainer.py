@@ -54,17 +54,3 @@ model.most_similar(positive=['method'])
 
 w2v = model.wv
 # w2v = dict(zip(model.wv.index2word, model.wv.syn0))
-
-
-LabeledSentence = gensim.models.doc2vec.LabeledSentence
-def labels(docs, label_type):
-    labelized = []
-    for i,v in tqdm(enumerate(tweets)):
-        label = '%s_%s'%(label_type,i)
-        labelized.append(LabeledSentence(v, [label]))
-    return labelized
-
-x_train = labelizeTweets(x_train, 'TRAIN')
-x_test = labelizeTweets(x_test, 'TEST')
-
-x_train[0]

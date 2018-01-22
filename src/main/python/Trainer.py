@@ -21,12 +21,24 @@ from keras.layers import Dense, Input, GlobalMaxPooling1D
 from keras.layers import Conv1D, MaxPooling1D, Embedding
 from keras.models import Model
 
+from elasticsearch import Elasticsearch
+es = Elasticsearch(["elasticsearch"], maxsize=25)
+
+import nltk
+nltk.download('punkt')
+from nltk.tokenize import word_tokenize
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
+from nltk.stem.porter import PorterStemmer
+porter = PorterStemmer()
+
 
 BASE_DIR = '/glove'
 GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
 TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
 MAX_SEQUENCE_LENGTH = 1000
-MAX_NUM_WORDS = 20000
+MAX_NUM_WORDS = 5000
 EMBEDDING_DIM = 100
 VALIDATION_SPLIT = 0.2
 
@@ -49,28 +61,34 @@ print('Found %s word vectors.' % len(embeddings_index))
 # second, prepare text samples and their labels
 print('Processing text dataset')
 
+def cleanText(text):
+    tokens = word_tokenize(text)
+    tokens = [w.lower() for w in tokens]
+    import string
+    table = str.maketrans('', '', string.punctuation)
+    stripped = [w.translate(table) for w in tokens]
+    words = [word for word in stripped if word.isalpha()]
+    words = [w for w in words if not w in stop_words]
+    return words
+
+
 texts = []  # list of text samples
 labels_index = {}  # dictionary mapping label name to numeric id
 labels = []  # list of label ids
-for name in sorted(os.listdir(TEXT_DATA_DIR)):
-    path = os.path.join(TEXT_DATA_DIR, name)
-    if os.path.isdir(path):
+res = es.search(index="intelligence", size=15, body={"query": {"match_all": {}}})
+print("Got %d Hits:" % res['hits']['total'])
+for hit in res['hits']['hits']:
+    # print("%(category)s %(text)s" % hit["_source"])
+    text = hit["_source"]["text"][0]
+    label = "IMP" # hit["_source"]["category"][0]
+    text = text.replace('\\n', ' ')
+    if not label in labels_index:
         label_id = len(labels_index)
-        labels_index[name] = label_id
-        for fname in sorted(os.listdir(path)):
-            if fname.isdigit():
-                fpath = os.path.join(path, fname)
-                if sys.version_info < (3,):
-                    f = open(fpath)
-                else:
-                    f = open(fpath, encoding='latin-1')
-                t = f.read()
-                i = t.find('\n\n')  # skip header
-                if 0 < i:
-                    t = t[i:]
-                texts.append(t)
-                f.close()
-                labels.append(label_id)
+        labels_index[label] = label_id
+    texts.append(text)
+    labels.append(label_id)
+
+
 
 print('Found %s texts.' % len(texts))
 
@@ -140,6 +158,8 @@ model.compile(loss='categorical_crossentropy',
               optimizer='rmsprop',
               metrics=['acc'])
 
+y_train = to_categorical(y_train)
+x_train = to_categorical(x_train)
 model.fit(x_train, y_train,
           batch_size=128,
           epochs=10,
