@@ -39,14 +39,10 @@ class ElasticSimilarity:
             yield text, id
 
     def es_doc(self, doc_id):
-        res = self.es.search(index="intelligence", body={"query": {"match_all": {}}})
-        print("Got %d Hits:" % res['hits']['total'])
-        for hit in res['hits']['hits']:
-            # print("%(category)s %(text)s" % hit["_source"])
-            text = hit["_source"]["text"][0]
-            text = text.replace('\\n', ' ')
-            id = hit["_id"]
-            yield text, id
+        res = self.es.get(index="intelligence", id=doc_id, doc_type='discoverer')
+        text = res["_source"]["text"][0]
+        text = text.replace('\\n', ' ')
+        return text
 
     def clean_tokens(self, text):
         try:
@@ -65,7 +61,7 @@ class ElasticSimilarity:
         for doc, id in self.es_docs(start_doc, train_docs):
             tokens = self.clean_tokens(doc)
             if tokens != 'NC':
-                td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(),str(id))
+                td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(),[id])
                 self.taggeddoc.append(td)
 
         print ('Data Loading finished')
@@ -83,13 +79,17 @@ class ElasticSimilarity:
         model.save_word2vec_format(self.model_file + '.word2vec')
 
     def similar(self, doc_id):
-
         word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
-        print (word2vec.most_similar('research'))
         model = gensim.models.Doc2Vec.load(self.model_file)
+        doc = self.es_doc(doc_id)
+        tokens = self.clean_tokens(doc)
+        infer = model.infer_vector(tokens)
+        similar = model.docvecs.most_similar([infer])
+        print(similar)
+
 
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
-    # esSimilarity.train(START_DOC, TRAIN_DOCS)
-    esSimilarity.similar('444')
+    esSimilarity.train(START_DOC, TRAIN_DOCS)
+    esSimilarity.similar('k1GX5WAB21MqlvbL0OFV')
