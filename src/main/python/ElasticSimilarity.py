@@ -17,13 +17,13 @@ porter = PorterStemmer()
 
 TRAIN_DOCS = 5
 es = ConfigMap("ElasticSearch")
+training = ConfigMap("Training")
 
 class ElasticSimilarity:
 
     def __init__(self):
 
-        self.base_dir = '/assets'
-        self.model_file = os.path.join(self.base_dir, 'doc_model')
+        self.model_file = os.path.join(training['basedir'], 'doc_model')
 
         self.es = Elasticsearch([es['server']], port = es['port'])
 
@@ -43,7 +43,7 @@ class ElasticSimilarity:
 
 
     def es_doc(self, doc_id):
-        res = self.es.get(index="intelligence", id=doc_id, doc_type='discoverer')
+        res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
         text = res["_source"]["text"][0]
         text = text.replace('\\n', ' ')
         return text
