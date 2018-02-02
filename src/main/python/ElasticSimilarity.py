@@ -28,6 +28,9 @@ class ElasticSimilarity:
 
         self.taggeddoc = []
 
+        self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
+        self.model = gensim.models.Doc2Vec.load(self.model_file)
+
 
     def es_doc(self, doc_id):
         res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
@@ -49,15 +52,12 @@ class ElasticSimilarity:
             return 'NC'
 
     def similar(self, doc_id):
-        word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
-        model = gensim.models.Doc2Vec.load(self.model_file)
         doc = self.es_doc(doc_id)
         tokens = self.clean_tokens(doc)
-        infer = model.infer_vector(tokens)
-        similar = model.docvecs.most_similar([infer])
+        infer = self.model.infer_vector(tokens)
+        similar = self.model.docvecs.most_similar([infer])
         print(similar)
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
-    esSimilarity.train(TRAIN_DOCS)
     esSimilarity.similar('k1GX5WAB21MqlvbL0OFV')
