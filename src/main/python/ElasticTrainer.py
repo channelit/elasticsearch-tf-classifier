@@ -53,7 +53,7 @@ class ElasticSimilarity:
     def train(self, train_docs):
         for doc, id in self.es_docs(train_docs):
             tokens = self.clean_tokens(doc)
-            if tokens != 'NC':
+            if tokens != 'NC' and len(tokens) > 200:
                 td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(),[id])
                 self.taggeddoc.append(td)
 
@@ -70,15 +70,6 @@ class ElasticSimilarity:
             model.min_alpha = model.alpha  # fix the learning rate, no decay
         model.save(self.model_file)
         model.save_word2vec_format(self.model_file + '.word2vec')
-
-    def similar(self, doc_id):
-        word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
-        model = gensim.models.Doc2Vec.load(self.model_file)
-        doc = self.es_doc(doc_id)
-        tokens = self.clean_tokens(doc)
-        infer = model.infer_vector(tokens)
-        similar = model.docvecs.most_similar([infer])
-        print(similar)
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
