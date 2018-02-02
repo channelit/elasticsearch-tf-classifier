@@ -60,7 +60,7 @@ class ElasticSimilarity:
         print ('Data Loading finished')
         print (len(self.taggeddoc),type(self.taggeddoc))
 
-        model = gensim.models.Doc2Vec(self.taggeddoc, dm = 0, iter=1,  window=5, seed=1337, min_count=5, workers=4, alpha=0.025, size= 20, min_alpha=0.025)
+        model = gensim.models.Doc2Vec(self.taggeddoc, dm = 0, iter=1,  window=5, seed=1337, min_count=5, workers=4, alpha=0.025, size=200, min_alpha=0.025)
 
         for epoch in range(200):
             if epoch % 20 == 0:
