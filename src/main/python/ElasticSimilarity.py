@@ -30,7 +30,7 @@ class ElasticSimilarity:
         self.taggeddoc = []
 
     def es_docs(self, train_docs):
-        res = helpers.scan(index="intelligence", size=train_docs, scroll='1m', client = self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], size=train_docs, scroll='1m', client = self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
         for hit in res:
