@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 from _config import ConfigMap
 import nltk
 import gensim
@@ -15,8 +15,7 @@ stop_words = set(stopwords.words('english'))
 from nltk.stem.porter import PorterStemmer
 porter = PorterStemmer()
 
-START_DOC = 5
-TRAIN_DOCS = 50
+TRAIN_DOCS = 5
 es = ConfigMap("ElasticSearch")
 
 class ElasticSimilarity:
@@ -26,20 +25,22 @@ class ElasticSimilarity:
         self.base_dir = '/assets'
         self.model_file = os.path.join(self.base_dir, 'doc_model')
 
-        self.es = Elasticsearch([es['server'] + ":" + es['port']], maxsize=25)
+        self.es = Elasticsearch([es['server']], port = es['port'])
 
         self.taggeddoc = []
 
-    def es_docs(self, start_doc, train_docs):
-        res = self.es.search(index="intelligence", from_=start_doc, size=train_docs, body={"query": {"match_all": {}}})
-        print("Got %d Hits:" % res['hits']['total'])
-        for hit in res['hits']['hits']:
+    def es_docs(self, train_docs):
+        res = helpers.scan(index="intelligence", size=train_docs, scroll='1m', client = self.es, preserve_order=True,
+                           query={"query": {"match_all": {}}},
+                           )
+        for hit in res:
             if "text" in hit["_source"] :
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = hit["_source"]["text"][0]
                 text = text.replace('\\n', ' ')
                 id = hit["_id"]
                 yield text, id
+
 
     def es_doc(self, doc_id):
         res = self.es.get(index="intelligence", id=doc_id, doc_type='discoverer')
@@ -60,8 +61,8 @@ class ElasticSimilarity:
         except:
             return 'NC'
 
-    def train(self, start_doc, train_docs):
-        for doc, id in self.es_docs(start_doc, train_docs):
+    def train(self, train_docs):
+        for doc, id in self.es_docs(train_docs):
             tokens = self.clean_tokens(doc)
             if tokens != 'NC':
                 td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(),[id])
@@ -92,5 +93,5 @@ class ElasticSimilarity:
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
-    esSimilarity.train(START_DOC, TRAIN_DOCS)
+    esSimilarity.train(TRAIN_DOCS)
     esSimilarity.similar('k1GX5WAB21MqlvbL0OFV')
