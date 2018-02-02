@@ -1,11 +1,11 @@
 from elasticsearch import Elasticsearch
 import nltk
 
-nltk.download('punkt')
+# nltk.download('punkt')
 
 from nltk.tokenize import word_tokenize
 
-nltk.download('stopwords')
+# nltk.download('stopwords')
 from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
 

@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+from _config import ConfigMap
 import nltk
 import gensim
 import os
@@ -16,6 +17,7 @@ porter = PorterStemmer()
 
 START_DOC = 5
 TRAIN_DOCS = 50
+es = ConfigMap("ElasticSearch")
 
 class ElasticSimilarity:
 
@@ -24,7 +26,7 @@ class ElasticSimilarity:
         self.base_dir = '/assets'
         self.model_file = os.path.join(self.base_dir, 'doc_model')
 
-        self.es = Elasticsearch(["elasticsearch"], maxsize=25)
+        self.es = Elasticsearch([es['server'] + ":" + es['port']], maxsize=25)
 
         self.taggeddoc = []
 
@@ -32,11 +34,12 @@ class ElasticSimilarity:
         res = self.es.search(index="intelligence", from_=start_doc, size=train_docs, body={"query": {"match_all": {}}})
         print("Got %d Hits:" % res['hits']['total'])
         for hit in res['hits']['hits']:
-            # print("%(category)s %(text)s" % hit["_source"])
-            text = hit["_source"]["text"][0]
-            text = text.replace('\\n', ' ')
-            id = hit["_id"]
-            yield text, id
+            if "text" in hit["_source"] :
+                # print("%(category)s %(text)s" % hit["_source"])
+                text = hit["_source"]["text"][0]
+                text = text.replace('\\n', ' ')
+                id = hit["_id"]
+                yield text, id
 
     def es_doc(self, doc_id):
         res = self.es.get(index="intelligence", id=doc_id, doc_type='discoverer')
@@ -86,8 +89,6 @@ class ElasticSimilarity:
         infer = model.infer_vector(tokens)
         similar = model.docvecs.most_similar([infer])
         print(similar)
-
-
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
