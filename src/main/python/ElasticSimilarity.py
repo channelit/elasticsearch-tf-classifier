@@ -1,9 +1,10 @@
-from elasticsearch import Elasticsearch, helpers
-from _config import ConfigMap
-import nltk
 import gensim
+import nltk
 import os
-from gensim.models.doc2vec import TaggedDocument
+from elasticsearch import Elasticsearch
+
+from _config import ConfigMap
+
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
 import string
@@ -21,16 +22,10 @@ training = ConfigMap("Training")
 class ElasticSimilarity:
 
     def __init__(self):
-
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-
         self.es = Elasticsearch([es['server']], port = es['port'])
-
-        self.taggeddoc = []
-
         self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
         self.model = gensim.models.Doc2Vec.load(self.model_file)
-
 
     def es_doc(self, doc_id):
         res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])

@@ -21,11 +21,8 @@ training = ConfigMap("Training")
 class ElasticSimilarity:
 
     def __init__(self):
-
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-
         self.es = Elasticsearch([es['server']], port = es['port'])
-
         self.taggeddoc = []
 
     def es_docs(self, train_docs):
@@ -39,13 +36,6 @@ class ElasticSimilarity:
                 text = text.replace('\\n', ' ')
                 id = hit["_id"]
                 yield text, id
-
-
-    def es_doc(self, doc_id):
-        res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
-        text = res["_source"][es['textfield']][0]
-        text = text.replace('\\n', ' ')
-        return text
 
     def clean_tokens(self, text):
         try:
