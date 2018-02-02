@@ -36,7 +36,7 @@ class ElasticSimilarity:
         for hit in res:
             if "text" in hit["_source"] :
                 # print("%(category)s %(text)s" % hit["_source"])
-                text = hit["_source"]["text"][0]
+                text = hit["_source"][es['textfield']][0]
                 text = text.replace('\\n', ' ')
                 id = hit["_id"]
                 yield text, id
@@ -44,7 +44,7 @@ class ElasticSimilarity:
 
     def es_doc(self, doc_id):
         res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
-        text = res["_source"]["text"][0]
+        text = res["_source"][es['textfield']][0]
         text = text.replace('\\n', ' ')
         return text
 
