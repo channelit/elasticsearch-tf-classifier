@@ -84,7 +84,7 @@ class ElasticSummarizer:
                 }
                 update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,refresh=True)
                 print(update_response)
-            except e:
+            except:
                 print("error")
 
 
