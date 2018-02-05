@@ -55,9 +55,10 @@ class ElasticSummarizer:
         res = list(res)
         for hit in res:
             if es['textfield'] in hit["_source"]:
-                # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ').replace('\\t', ' ')
+                text = ''.join([x if x.isalpha() or x.isspace() else " " for x in text])
+                text = text.strip()
                 id = hit["_id"]
                 if len(text.strip()) > 100:
                     yield text, id
@@ -70,6 +71,7 @@ class ElasticSummarizer:
 
     def populate_summaries(self):
         for text, id in self.es_docs():
+            print("processing doc id:", id)
             text_summary = summarize(text, ratio=0.8)
             text_keywords = keywords(text, ratio=0.8)
             text_keywords = self.clean_tokens(text_keywords.splitlines())
