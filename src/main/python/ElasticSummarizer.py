@@ -60,7 +60,7 @@ class ElasticSummarizer:
                 text = ''.join([x if x.isalpha() or x.isspace() else " " for x in text])
                 text = text.strip()
                 id = hit["_id"]
-                if len(text.strip()) > 100:
+                if len(text) > 100:
                     yield text, id
 
     def clean_tokens(self, tokens):
@@ -72,18 +72,20 @@ class ElasticSummarizer:
     def populate_summaries(self):
         for text, id in self.es_docs():
             print("processing doc id:", id)
-            text_summary = summarize(text, ratio=0.8)
-            text_keywords = keywords(text, ratio=0.8)
-            text_keywords = self.clean_tokens(text_keywords.splitlines())
-            body = {
-                "doc": {
-                    "text_summary": text_summary,
-                    "text_keywords": text_keywords.tolist()
+            try:
+                text_summary = summarize(text, ratio=0.8)
+                text_keywords = keywords(text, ratio=0.8)
+                text_keywords = self.clean_tokens(text_keywords.splitlines())
+                body = {
+                    "doc": {
+                        "text_summary": text_summary,
+                        "text_keywords": text_keywords.tolist()
+                    }
                 }
-            }
-            update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,
-                                             refresh=True)
-            print(update_response)
+                update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,refresh=True)
+                print(update_response)
+            except e:
+                print("error")
 
 
 if __name__ == '__main__':
