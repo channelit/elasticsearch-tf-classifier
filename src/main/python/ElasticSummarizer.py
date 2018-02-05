@@ -38,11 +38,14 @@ class ElasticSummarizer:
         query_no_summary = {
             "query" : {
                 "bool" : {
-                    "must_not" : {
+                    "must_not" : [{
                         "exists" : {
                             "field" : "text_summary"
+                        },
+                        "exists" : {
+                            "field" : "error"
                         }
-                    }
+                    }]
                 }
             }
         }
@@ -54,9 +57,10 @@ class ElasticSummarizer:
             if es['textfield'] in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
-                text = text.replace('\\n', '. ')
+                text = text.replace('\\n', ' ').replace('\\t', ' ')
                 id = hit["_id"]
-                yield text, id
+                if len(text.strip()) > 100:
+                    yield text, id
 
     def clean_tokens(self, tokens):
         tokens = [w.lower() for w in tokens]
@@ -66,8 +70,8 @@ class ElasticSummarizer:
 
     def populate_summaries(self):
         for text, id in self.es_docs():
-            text_summary = summarize(text, ratio=0.01)
-            text_keywords = keywords(text, ratio=0.01)
+            text_summary = summarize(text, ratio=0.8)
+            text_keywords = keywords(text, ratio=0.8)
             text_keywords = self.clean_tokens(text_keywords.splitlines())
             body = {
                 "doc": {
