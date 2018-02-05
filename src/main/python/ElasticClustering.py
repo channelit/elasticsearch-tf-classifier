@@ -87,6 +87,7 @@ class ElasticClustering:
         res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
+        res = list(res)
         for hit in res:
             if "text" in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
