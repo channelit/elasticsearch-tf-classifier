@@ -91,7 +91,7 @@ class ElasticClustering:
         for hit in res:
             if "text" in hit["_source"] :
                 # print("%(category)s %(text)s" % hit["_source"])
-                text = hit["_source"][es['textfield']][0]
+                text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ')
                 id = hit["_id"]
                 yield text, id

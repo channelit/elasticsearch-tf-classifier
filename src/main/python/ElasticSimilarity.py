@@ -29,7 +29,7 @@ class ElasticSimilarity:
 
     def es_doc(self, doc_id):
         res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
-        text = res["_source"][es['textfield']][0]
+        text = eval(es['textfieldobj'])
         text = text.replace('\\n', ' ')
         return text
 
