@@ -1,9 +1,12 @@
 from elasticsearch import Elasticsearch, helpers
 from _config import ConfigMap
 import nltk
-import gensim
+from gensim.summarization import summarize
+from gensim.summarization import keywords
 import os
-from gensim.models.doc2vec import TaggedDocument
+import numpy
+import json
+
 
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
@@ -18,12 +21,12 @@ from nltk.stem.porter import PorterStemmer
 
 porter = PorterStemmer()
 
-TRAIN_DOCS = 15
+BATCH_SIZE = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 
 
-class ElasticSimilarity:
+class ElasticSummarizer:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
@@ -31,7 +34,7 @@ class ElasticSimilarity:
         self.taggeddoc = []
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
         res = list(res)
@@ -43,42 +46,26 @@ class ElasticSimilarity:
                 id = hit["_id"]
                 yield text, id
 
-    def clean_tokens(self, text):
-        try:
-            tokens = word_tokenize(text)
-            tokens = [w.lower() for w in tokens]
-            table = str.maketrans('', '', string.punctuation)
-            stripped = [w.translate(table) for w in tokens]
-            words = [word for word in stripped if word.isalpha()]
-            words = [w for w in words if (len(w) in range(2, 12) and not w in stop_words)]
-            words = [porter.stem(w) for w in words]
-            return words
-        except:
-            return 'NC'
+    def clean_tokens(self, tokens):
+        tokens = [w.lower() for w in tokens]
+        tokens = [t for t in tokens if t.isalpha() and t not in string.punctuation]
+        tokens = [porter.stem(t) for t in tokens]
+        return numpy.unique(tokens)
 
-    def train(self):
-        for doc, id in self.es_docs():
-            tokens = self.clean_tokens(doc)
-            if tokens != 'NC' and len(tokens) > 200:
-                td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(), [id])
-                self.taggeddoc.append(td)
-
-        print ('Data Loading finished')
-        print (len(self.taggeddoc), type(self.taggeddoc))
-
-        model = gensim.models.Doc2Vec(self.taggeddoc, dm=0, iter=1, window=5, seed=1337, min_count=5, workers=4,
-                                      alpha=0.025, size=200, min_alpha=0.025)
-
-        for epoch in range(200):
-            if epoch % 20 == 0:
-                print ('Now training epoch %s' % epoch)
-            model.train(self.taggeddoc, total_examples=model.corpus_count, epochs=model.iter)
-            model.alpha -= 0.002  # decrease the learning rate
-            model.min_alpha = model.alpha  # fix the learning rate, no decay
-        model.save(self.model_file)
-        model.save_word2vec_format(self.model_file + '.word2vec')
-
+    def populate_summaries(self):
+        for text, id in self.es_docs():
+            text_summary = summarize(text, ratio=0.01)
+            text_keywords = keywords(text, ratio=0.01)
+            text_keywords = self.clean_tokens(text_keywords.splitlines())
+            body = {
+                "doc" : {
+                    "text_summary" : text_summary,
+                    "text_keywords" : text_keywords.tolist()
+                }
+            }
+            update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False, refresh=True)
+            print(update_response)
 
 if __name__ == '__main__':
-    esSimilarity = ElasticSimilarity()
-    esSimilarity.train()
+    esSummarizer = ElasticSummarizer()
+    esSummarizer.populate_summaries()
