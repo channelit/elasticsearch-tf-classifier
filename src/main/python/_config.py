@@ -1,5 +1,6 @@
 import configparser
 
+
 def ConfigMap(section):
     config = configparser.ConfigParser()
     config.read("../resources/_config.ini")

@@ -8,14 +8,15 @@ from nltk.cluster.kmeans import KMeansClusterer
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
 import string
+
 nltk.download('stopwords')
 from nltk.corpus import stopwords
 
 stop_words = set(stopwords.words('english'))
 
 from nltk.stem.porter import PorterStemmer
-porter = PorterStemmer()
 
+porter = PorterStemmer()
 
 from _config import ConfigMap
 
@@ -25,14 +26,14 @@ TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 
+
 class ElasticClustering:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-        self.es = Elasticsearch([es['server']], port = es['port'])
+        self.es = Elasticsearch([es['server']], port=es['port'])
         self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
         self.model = gensim.models.Doc2Vec.load(self.model_file)
-
 
     # clustersizes = []
     #
@@ -51,7 +52,6 @@ class ElasticClustering:
     #         dist = math.sqrt(dist)
     #         print("distance cluster: "+str(i)+" RMSE: "+str(dist)+" clustersize: "+str(clustersize))
 
-
     def get_titles_by_cluster(self, id):
         list = []
         for x in range(0, len(assigned_clusters)):
@@ -67,7 +67,6 @@ class ElasticClustering:
         count = Counter(filtered_words)
         print(count.most_common()[:5])
 
-
     def cluster_to_topics(self, id):
         get_topics(get_titles_by_cluster(id))
 
@@ -78,18 +77,18 @@ class ElasticClustering:
             table = str.maketrans('', '', string.punctuation)
             stripped = [w.translate(table) for w in tokens]
             words = [word for word in stripped if word.isalpha()]
-            words = [w for w in words if (len(w) in range(2,12) and not w in stop_words)]
+            words = [w for w in words if (len(w) in range(2, 12) and not w in stop_words)]
             words = [porter.stem(w) for w in words]
             return words
         except:
             return 'NC'
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client = self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
         for hit in res:
-            if "text" in hit["_source"] :
+            if "text" in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ')
@@ -112,7 +111,7 @@ class ElasticClustering:
 
         print("done")
 
+
 if __name__ == '__main__':
     esClustering = ElasticClustering()
     esClustering.cluster_docs()
-

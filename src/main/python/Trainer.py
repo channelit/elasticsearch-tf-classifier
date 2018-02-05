@@ -22,17 +22,21 @@ from keras.layers import Conv1D, MaxPooling1D, Embedding
 from keras.models import Model
 
 from elasticsearch import Elasticsearch
+
 es = Elasticsearch(["elasticsearch"], maxsize=25)
 
 import nltk
+
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
+
 nltk.download('stopwords')
 from nltk.corpus import stopwords
+
 stop_words = set(stopwords.words('english'))
 from nltk.stem.porter import PorterStemmer
-porter = PorterStemmer()
 
+porter = PorterStemmer()
 
 BASE_DIR = '/glove'
 GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
@@ -61,6 +65,7 @@ print('Found %s word vectors.' % len(embeddings_index))
 # second, prepare text samples and their labels
 print('Processing text dataset')
 
+
 def cleanText(text):
     tokens = word_tokenize(text)
     tokens = [w.lower() for w in tokens]
@@ -80,15 +85,13 @@ print("Got %d Hits:" % res['hits']['total'])
 for hit in res['hits']['hits']:
     # print("%(category)s %(text)s" % hit["_source"])
     text = hit["_source"]["text"][0]
-    label = "IMP" # hit["_source"]["category"][0]
+    label = "IMP"  # hit["_source"]["category"][0]
     text = text.replace('\\n', ' ')
     if not label in labels_index:
         label_id = len(labels_index)
         labels_index[label] = label_id
     texts.append(text)
     labels.append(label_id)
-
-
 
 print('Found %s texts.' % len(texts))
 
