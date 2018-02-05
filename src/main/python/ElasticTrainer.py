@@ -25,8 +25,8 @@ class ElasticSimilarity:
         self.es = Elasticsearch([es['server']], port = es['port'])
         self.taggeddoc = []
 
-    def es_docs(self, train_docs):
-        res = helpers.scan(index=es['index'], size=train_docs, scroll='1m', client = self.es, preserve_order=True,
+    def es_docs(self):
+        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client = self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
         for hit in res:
@@ -50,8 +50,8 @@ class ElasticSimilarity:
         except:
             return 'NC'
 
-    def train(self, train_docs):
-        for doc, id in self.es_docs(train_docs):
+    def train(self):
+        for doc, id in self.es_docs():
             tokens = self.clean_tokens(doc)
             if tokens != 'NC' and len(tokens) > 200:
                 td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(),[id])
@@ -73,4 +73,4 @@ class ElasticSimilarity:
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
-    esSimilarity.train(TRAIN_DOCS)
+    esSimilarity.train()

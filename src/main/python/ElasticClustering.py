@@ -1,83 +1,118 @@
-from elasticsearch import Elasticsearch
+import gensim
 import nltk
-
-
-import json
+import os
 import re
+from elasticsearch import Elasticsearch, helpers
+from nltk.cluster.kmeans import KMeansClusterer
 
-import nltk
-from gensim.models import Doc2Vec
-from nltk.cluster import KMeansClusterer
+nltk.download('punkt')
+from nltk.tokenize import word_tokenize
+import string
+nltk.download('stopwords')
 from nltk.corpus import stopwords
 
-NUM_CLUSTERS = 15
+stop_words = set(stopwords.words('english'))
 
-def preprocess(str):
-    # remove links
-    str = re.sub(r'http(s)?:\/\/\S*? ', "", str)
-    return str
+from nltk.stem.porter import PorterStemmer
+porter = PorterStemmer()
 
 
-def preprocess_document(text):
-    text = preprocess(text)
-    return ''.join([x if x.isalnum() or x.isspace() else " " for x in text ]).split()
+from _config import ConfigMap
+
+NUM_CLUSTERS = 5
+
+TRAIN_DOCS = 15
+es = ConfigMap("ElasticSearch")
+training = ConfigMap("Training")
+
+class ElasticClustering:
+
+    def __init__(self):
+        self.model_file = os.path.join(training['basedir'], 'doc_model')
+        self.es = Elasticsearch([es['server']], port = es['port'])
+        self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
+        self.model = gensim.models.Doc2Vec.load(self.model_file)
 
 
+    # clustersizes = []
+    #
+    # def distanceToCentroid():
+    #     for i in range(0,NUM_CLUSTERS):
+    #         clustersize = 0
+    #         for j in range(0,len(assigned_clusters)):
+    #             if (assigned_clusters[j] == i):
+    #                 clustersize+=1
+    #         clustersizes.append(clustersize)
+    #         dist = 0.0
+    #         centr = means[i]
+    #         for j in range(0,len(assigned_clusters)):
+    #             if (assigned_clusters[j] == i):
+    #                 dist += pow(nltk.cluster.util.cosine_distance(vectors[j], centr),2)/clustersize
+    #         dist = math.sqrt(dist)
+    #         print("distance cluster: "+str(i)+" RMSE: "+str(dist)+" clustersize: "+str(clustersize))
 
-with open('dataset-links.txt') as data_file:
-    data = json.load(data_file)
 
-fname = "cyber-trend-index-dataset.model"
-model = Doc2Vec.load(fname)
+    def get_titles_by_cluster(self, id):
+        list = []
+        for x in range(0, len(assigned_clusters)):
+            if (assigned_clusters[x] == id):
+                list.append(used_lines[x])
+        return list
 
-duplicate_abstracts = {}
+    def get_topics(self, titles):
+        from collections import Counter
+        words = [preprocess_document(x) for x in titles]
+        words = [word for sublist in words for word in sublist]
+        filtered_words = [word for word in words if word not in stopwords.words('english')]
+        count = Counter(filtered_words)
+        print(count.most_common()[:5])
 
-used_objects = []
-vectors = []
-for i, d in enumerate(data):
-    abstract = d["abstract"].lower()
-    if abstract not in duplicate_abstracts:
-        duplicate_abstracts[abstract] = True
-        used_objects.append(d)
-        vectors.append(model.infer_vector(preprocess_document(abstract)))
 
-kclusterer = KMeansClusterer(NUM_CLUSTERS, distance=nltk.cluster.util.cosine_distance, repeats=25)
-assigned_clusters = kclusterer.cluster(vectors, assign_clusters=True)
+    def cluster_to_topics(self, id):
+        get_topics(get_titles_by_cluster(id))
 
-def get_objects_by_cluster(id):
-    list = []
-    for x in range(0, len(assigned_clusters)):
-        if (assigned_clusters[x] == id):
-            list.append(used_objects[x])
-    return list
+    def clean_tokens(self, text):
+        try:
+            tokens = word_tokenize(text)
+            tokens = [w.lower() for w in tokens]
+            table = str.maketrans('', '', string.punctuation)
+            stripped = [w.translate(table) for w in tokens]
+            words = [word for word in stripped if word.isalpha()]
+            words = [w for w in words if (len(w) in range(2,12) and not w in stop_words)]
+            words = [porter.stem(w) for w in words]
+            return words
+        except:
+            return 'NC'
 
-def get_topics(objects):
-    from collections import Counter
-    words = [preprocess_document(x["abstract"].lower()) for x in objects]
-    words = [word for sublist in words for word in sublist]
-    filtered_words = [word for word in words if word not in stopwords.words('english') and not word.isdigit()]
-    count = Counter(filtered_words)
-    return count.most_common()[:5]
+    def es_docs(self):
+        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client = self.es, preserve_order=True,
+                           query={"query": {"match_all": {}}},
+                           )
+        for hit in res:
+            if "text" in hit["_source"] :
+                # print("%(category)s %(text)s" % hit["_source"])
+                text = hit["_source"][es['textfield']][0]
+                text = text.replace('\\n', ' ')
+                id = hit["_id"]
+                yield text, id
 
-json_data = []
-for i in range(0,NUM_CLUSTERS):
-    cur_obj = {}
-    objects = get_objects_by_cluster(i)
-    topics = get_topics(objects)
-    avgactivity = 0
-    goodactivity = 0
-    goodcount = 0
-    for x in range(0, len(objects)):
-        avgactivity+=int(objects[x].get("activity"))/len(objects)
-        goodactivity += int(objects[x].get("activity"))
-        if (int(objects[x].get("activity")) > 0): goodcount+=1
-    goodactivity=goodactivity/goodcount
-    cur_obj["topics"] = topics
-    cur_obj["avgactivity"] = avgactivity
-    cur_obj["goodactivity"] = goodactivity
-    cur_obj["articles"] = objects
-    json_data.append(cur_obj)
+    def cluster_docs(self):
 
-f = open("output.json", "w")
-json.dump(json_data, f)
-f.close()
+        vectors = []
+        used_lines = []
+
+        for doc, id in self.es_docs():
+            tokens = self.clean_tokens(doc)
+            if tokens != 'NC' and len(tokens) > 200:
+                used_lines.append(tokens)
+                vectors.append(self.model.infer_vector(tokens))
+
+        kclusterer = KMeansClusterer(NUM_CLUSTERS, distance=nltk.cluster.util.cosine_distance, repeats=25)
+        assigned_clusters = kclusterer.cluster(vectors, assign_clusters=True)
+
+        print("done")
+
+if __name__ == '__main__':
+    esClustering = ElasticClustering()
+    esClustering.cluster_docs()
+
