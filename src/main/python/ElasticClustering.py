@@ -89,7 +89,7 @@ class ElasticClustering:
                            )
         res = list(res)
         for hit in res:
-            if "text" in hit["_source"]:
+            if es['textfield'] in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ')

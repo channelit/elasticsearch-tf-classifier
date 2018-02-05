@@ -23,6 +23,7 @@ porter = PorterStemmer()
 BATCH_SIZE = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
+query=ConfigMap("QueryTypes")
 
 
 class ElasticSummarizer:
@@ -46,14 +47,14 @@ class ElasticSummarizer:
             }
         }
         res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
-                           query=query_no_summary,
+                           query=eval(query['summary']),
                            )
         res = list(res)
         for hit in res:
-            if "text" in hit["_source"]:
+            if es['textfield'] in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
-                text = hit["_source"][es['textfield']][0]
-                text = text.replace('\\n', ' ')
+                text = eval(es['textfieldobj'])
+                text = text.replace('\\n', '. ')
                 id = hit["_id"]
                 yield text, id
 
