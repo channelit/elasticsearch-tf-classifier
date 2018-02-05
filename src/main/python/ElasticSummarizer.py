@@ -7,7 +7,6 @@ import os
 import numpy
 import json
 
-
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
 import string
@@ -34,8 +33,20 @@ class ElasticSummarizer:
         self.taggeddoc = []
 
     def es_docs(self):
+        query_match_all = {"query": {"match_all": {}}}
+        query_no_summary = {
+            "query" : {
+                "bool" : {
+                    "must_not" : {
+                        "exists" : {
+                            "field" : "text_summary"
+                        }
+                    }
+                }
+            }
+        }
         res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
-                           query={"query": {"match_all": {}}},
+                           query=query_no_summary,
                            )
         res = list(res)
         for hit in res:
@@ -58,13 +69,15 @@ class ElasticSummarizer:
             text_keywords = keywords(text, ratio=0.01)
             text_keywords = self.clean_tokens(text_keywords.splitlines())
             body = {
-                "doc" : {
-                    "text_summary" : text_summary,
-                    "text_keywords" : text_keywords.tolist()
+                "doc": {
+                    "text_summary": text_summary,
+                    "text_keywords": text_keywords.tolist()
                 }
             }
-            update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False, refresh=True)
+            update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,
+                                             refresh=True)
             print(update_response)
+
 
 if __name__ == '__main__':
     esSummarizer = ElasticSummarizer()
