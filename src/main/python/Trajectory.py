@@ -2,7 +2,7 @@ from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
 
-MAX_LINES = 10000
+MAX_LINES = 100000
 NUM_GROUPS = 100
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
@@ -58,16 +58,16 @@ class Trajectory:
             )
         )
 
-        circle = Circle(x="lon", y="lat", size=4, fill_color="blue", fill_alpha=0.8, line_color=None)
+        circle = Circle(x="lon", y="lat", size=1, fill_color="blue", fill_alpha=0.8, line_color=None)
         plot.add_glyph(source_start, circle)
 
-        circle = Circle(x="lon", y="lat", size=4, fill_color="green", fill_alpha=0.8, line_color=None)
+        circle = Circle(x="lon", y="lat", size=1, fill_color="green", fill_alpha=0.8, line_color=None)
         plot.add_glyph(source_end, circle)
 
-        circle = Circle(x="lon", y="lat", size=20, fill_color="blue", fill_alpha=0.1, line_color=None)
+        circle = Circle(x="lon", y="lat", size=10, fill_color="blue", fill_alpha=0.1, line_color=None)
         plot.add_glyph(source_circles_start, circle)
 
-        circle = Circle(x="lon", y="lat", size=20, fill_color="green", fill_alpha=0.1, line_color=None)
+        circle = Circle(x="lon", y="lat", size=10, fill_color="green", fill_alpha=0.1, line_color=None)
         plot.add_glyph(source_circles_end, circle)
 
         plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool())
