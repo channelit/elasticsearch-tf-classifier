@@ -6,6 +6,11 @@ MAX_LINES = 1000
 NUM_GROUPS = 100
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
+#
+# circles_start.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
+# for b in bboxs_end:
+#     circles_end.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
+
 class Trajectory:
     def __init__(self):
         print("start")
@@ -14,7 +19,7 @@ class Trajectory:
         tree = pysal.cg.kdtree.KDTree(pts, leafsize=10, distance_metric='Euclidean', radius=6371.0)
         return tree
 
-    def plot_on_bokeh(self, lats_start, lons_start, lats_end, lons_end, bboxes_start, bboxes_end, circles_start, circles_end):
+    def plot_on_bokeh(self, starts, ends, bboxes_start, bboxes_end):
         from bokeh.io import output_file, show
         from bokeh.models import (
             GMapPlot, GMapOptions, ColumnDataSource, GeoJSONDataSource, Circle, Segment, Quad, Range1d, PanTool, WheelZoomTool, BoxSelectTool
@@ -24,7 +29,7 @@ class Trajectory:
         import bokeh.io
         bokeh.io.output_notebook(INLINE)
 
-        map_options = GMapOptions(lat=40.73, lng=-73.56, map_type="roadmap", zoom=11)
+        map_options = GMapOptions(lat=40.98, lng=-73.16, map_type="roadmap", zoom=12)
 
         plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
         plot.title.text = "New York"
@@ -32,48 +37,30 @@ class Trajectory:
 
         source_start = ColumnDataSource(
             data=dict(
-                lat=lats_start,
-                lon=lons_start,
+                lat=[x[0] for x in starts],
+                lon=[y[1] for y in starts],
             )
         )
         source_end = ColumnDataSource(
             data=dict(
-                lat=lats_end,
-                lon=lons_end,
-            )
-        )
-
-        source_bbox_start = ColumnDataSource(
-            data=dict(
-                top=bboxes_start[3],
-                bottom=bboxes_start[2],
-                left=bboxes_start[1],
-                right=bboxes_start[0]
-            )
-        )
-
-        source_bbox_end = ColumnDataSource(
-            data=dict(
-                top=bboxes_end[0],
-                bottom=bboxes_end[1],
-                left=bboxes_end[2],
-                right=bboxes_end[3]
+                lat=[x[0] for x in ends],
+                lon=[y[1] for y in ends],
             )
         )
 
         source_circles_start = ColumnDataSource(
             data=dict(
-                lat=[x[1] for x in (y[0] for y in circles_start)],
-                lon=[x[0] for x in (y[0] for y in circles_start)],
-                radius=[y[1] for y in circles_start]
+                lon=[b.lower + b.height/2 for b in bboxes_start],
+                lat=[b.left + b.width/2 for b in bboxes_start],
+                radius=[max(b.width, b.height)/2 for b in bboxes_start]
             )
         )
 
         source_circles_end = ColumnDataSource(
             data=dict(
-                lat=[x[1] for x in (y[0] for y in circles_end)],
-                lon=[x[0] for x in (y[0] for y in circles_end)],
-                radius=[y[1] for y in circles_end]
+                lon=[b.lower + b.height/2 for b in bboxes_end],
+                lat=[b.left + b.width/2 for b in bboxes_end],
+                radius=[max(b.width, b.height)/2 for b in bboxes_end]
             )
         )
 
@@ -83,10 +70,10 @@ class Trajectory:
         circle = Circle(x="lon", y="lat", size=4, fill_color="green", fill_alpha=0.8, line_color=None)
         plot.add_glyph(source_end, circle)
 
-        circle = Circle(x="lon", y="lat", size=20, fill_color="blue", fill_alpha=0.2, line_color=None)
+        circle = Circle(x="lon", y="lat", size=20, fill_color="blue", fill_alpha=0.1, line_color=None)
         plot.add_glyph(source_circles_start, circle)
 
-        circle = Circle(x="lon", y="lat", size=20, fill_color="green", fill_alpha=0.2, line_color=None)
+        circle = Circle(x="lon", y="lat", size=20, fill_color="green", fill_alpha=0.1, line_color=None)
         plot.add_glyph(source_circles_end, circle)
 
 
@@ -113,23 +100,12 @@ class Trajectory:
         start_pos = []
         end_pos = []
 
-        lats_start = []
-        lats_end = []
-        lons_start = []
-        lons_end = []
-
         with open(file) as csvfile:
             readCSV = csv.reader(csvfile, delimiter=',')
 
             linectr = 0
             for row in readCSV:
                 if 0 < linectr < MAX_LINES:
-
-                    lats_start.append(float(row[6]))
-                    lats_end.append(float(row[10]))
-                    lons_start.append(float(row[5]))
-                    lons_end.append(float(row[9]))
-
                     p_start = Point((float(row[6]),float(row[5])))
                     p_end = Point((float(row[10]),float(row[9])))
                     if not p_start in start_pos:
@@ -170,40 +146,7 @@ class Trajectory:
             c = Chain(g)
             bboxs_end.append(c.bounding_box)
 
-
-        lefts_start = []
-        lefts_end = []
-
-        rights_start = []
-        rights_end = []
-
-        uppers_start = []
-        uppers_end = []
-
-        lowers_start = []
-        lowers_end = []
-
-        circles_start = []
-        circles_end = []
-
-        for b in bboxs_start:
-            lefts_start.append(b.left)
-            rights_start.append(b.right)
-            lowers_start.append(b.lower)
-            uppers_start.append(b.upper)
-            circles_start.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
-        for b in bboxs_end:
-            lefts_end.append(b.left)
-            rights_end.append(b.right)
-            lowers_end.append(b.lower)
-            uppers_end.append(b.upper)
-            circles_end.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
-
-        bboxes_start=[uppers_start, lowers_start, lefts_start, rights_start]
-
-        bboxes_end=[uppers_end, lowers_end, lefts_end, rights_end]
-
-        self.plot_on_bokeh(lats_start, lons_start, lats_end, lons_end, bboxes_start, bboxes_end, circles_start, circles_end)
+        self.plot_on_bokeh(start_pos, end_pos, bboxs_start, bboxs_end)
 
 if __name__ == '__main__':
     trajectory = Trajectory()
