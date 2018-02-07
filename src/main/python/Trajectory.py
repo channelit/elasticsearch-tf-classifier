@@ -2,14 +2,9 @@ from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
 
-MAX_LINES = 1000
+MAX_LINES = 10000
 NUM_GROUPS = 100
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
-
-#
-# circles_start.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
-# for b in bboxs_end:
-#     circles_end.append([[b.lower + b.height/2, b.left + b.width/2], max(b.width, b.height)])
 
 class Trajectory:
     def __init__(self):
@@ -25,11 +20,10 @@ class Trajectory:
             GMapPlot, GMapOptions, ColumnDataSource, GeoJSONDataSource, Circle, Segment, Quad, Range1d, PanTool, WheelZoomTool, BoxSelectTool
         )
         from bokeh.resources import INLINE
-        from bokeh.plotting import figure
         import bokeh.io
         bokeh.io.output_notebook(INLINE)
 
-        map_options = GMapOptions(lat=40.98, lng=-73.16, map_type="roadmap", zoom=12)
+        map_options = GMapOptions(lat=40.7831, lng=-73.9712, map_type="roadmap", zoom=12)
 
         plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
         plot.title.text = "New York"
@@ -75,19 +69,6 @@ class Trajectory:
 
         circle = Circle(x="lon", y="lat", size=20, fill_color="green", fill_alpha=0.1, line_color=None)
         plot.add_glyph(source_circles_end, circle)
-
-
-        # quad = Quad(top="top", bottom="bottom", left="left", right="right", fill_color="blue", fill_alpha=1)
-        # segment = Segment(x1="top", x0="bottom", y1="left", y0="right", line_color="blue", line_alpha=1)
-
-        # p.quad(top="top", bottom="bottom", left="left", right="right", color="blue", alpha=1, source=source_bbox_start)
-        # f.segment(x1="left", x0="right", y1="top", y0="bottom", color="blue", source=source_bbox_start)
-        # output_file("/assets/geojson.html")
-        # show(f)
-        # plot.add_glyph(source_bbox_start, segment)
-
-        # quad = Quad(top="top", bottom="bottom", left="left", right="right", fill_color="blue", fill_alpha=0.9)
-        # plot.add_glyph(source_bbox_end, quad)
 
         plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool())
         output_file("/assets/gmap_plot.html")
