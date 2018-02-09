@@ -2,8 +2,8 @@ from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
 
-MAX_LINES = 100000
-NUM_GROUPS = 100
+MAX_LINES = 10000
+NUM_GROUPS = 70
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
 class Trajectory:

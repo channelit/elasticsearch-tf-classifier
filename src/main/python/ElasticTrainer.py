@@ -23,7 +23,7 @@ es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 
 
-class ElasticSimilarity:
+class ElasticTrainer:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
@@ -80,5 +80,5 @@ class ElasticSimilarity:
 
 
 if __name__ == '__main__':
-    esSimilarity = ElasticSimilarity()
-    esSimilarity.train()
+    esTrainer = ElasticTrainer()
+    esTrainer.train()

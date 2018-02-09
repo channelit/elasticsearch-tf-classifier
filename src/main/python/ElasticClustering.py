@@ -26,7 +26,6 @@ TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 
-
 class ElasticClustering:
 
     def __init__(self):
