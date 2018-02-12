@@ -1,7 +1,6 @@
 
 import gensim
 import spacy
-from spacy.en import English
 import numpy as np
 
 class TextCleaner:

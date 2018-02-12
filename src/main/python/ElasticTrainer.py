@@ -61,7 +61,7 @@ class ElasticTrainer:
     def train(self):
         for doc, id in self.es_docs():
             # tokens = self.clean_tokens(doc)
-            tokens = TextCleaner(doc)
+            tokens = text_cleaner.clean_tokens(doc)
             if tokens != 'NC' and len(tokens) > 200:
                 td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(), [id])
                 self.taggeddoc.append(td)
