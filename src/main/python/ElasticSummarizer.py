@@ -40,10 +40,7 @@ class ElasticSummarizer:
                 "bool" : {
                     "must_not" : [{
                         "exists" : {
-                            "field" : "text_summary"
-                        },
-                        "exists" : {
-                            "field" : "error"
+                            "field" : "text_summary,error"
                         }
                     }]
                 }
