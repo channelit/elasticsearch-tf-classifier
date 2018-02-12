@@ -7,7 +7,7 @@ class TextCleaner:
 
     def __init__(self):
         my_stop_words = [u'say', u'\'s', u'Mr', u'be', u'said', u'says', u'saying']
-        self.nlp = spacy.load("en")
+        self.nlp = spacy.load("en_core_web_sm")
 
         for stopword in my_stop_words:
             lexeme = self.nlp.vocab[stopword]
