@@ -4,6 +4,7 @@ import nltk
 import gensim
 import os
 from gensim.models.doc2vec import TaggedDocument
+from TextCleaner import TextCleaner
 
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
@@ -21,6 +22,7 @@ porter = PorterStemmer()
 TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
+text_cleaner = TextCleaner()
 
 
 class ElasticTrainer:
@@ -58,7 +60,8 @@ class ElasticTrainer:
 
     def train(self):
         for doc, id in self.es_docs():
-            tokens = self.clean_tokens(doc)
+            # tokens = self.clean_tokens(doc)
+            tokens = TextCleaner(doc)
             if tokens != 'NC' and len(tokens) > 200:
                 td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(), [id])
                 self.taggeddoc.append(td)
