@@ -1,23 +1,13 @@
+import nltk, math, codecs
 import gensim
-import nltk
 import os
 import re
 from elasticsearch import Elasticsearch, helpers
 from nltk.cluster.kmeans import KMeansClusterer
 
-nltk.download('punkt')
-from nltk.tokenize import word_tokenize
 import string
-
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-
-stop_words = set(stopwords.words('english'))
-
-from nltk.stem.porter import PorterStemmer
-
-porter = PorterStemmer()
-
+from TextCleaner import TextCleaner
+text_cleaner = TextCleaner()
 from _config import ConfigMap
 
 NUM_CLUSTERS = 5
@@ -33,23 +23,6 @@ class ElasticClustering:
         self.es = Elasticsearch([es['server']], port=es['port'])
         self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
         self.model = gensim.models.Doc2Vec.load(self.model_file)
-
-    # clustersizes = []
-    #
-    # def distanceToCentroid():
-    #     for i in range(0,NUM_CLUSTERS):
-    #         clustersize = 0
-    #         for j in range(0,len(assigned_clusters)):
-    #             if (assigned_clusters[j] == i):
-    #                 clustersize+=1
-    #         clustersizes.append(clustersize)
-    #         dist = 0.0
-    #         centr = means[i]
-    #         for j in range(0,len(assigned_clusters)):
-    #             if (assigned_clusters[j] == i):
-    #                 dist += pow(nltk.cluster.util.cosine_distance(vectors[j], centr),2)/clustersize
-    #         dist = math.sqrt(dist)
-    #         print("distance cluster: "+str(i)+" RMSE: "+str(dist)+" clustersize: "+str(clustersize))
 
     def get_titles_by_cluster(self, id):
         list = []
@@ -68,19 +41,6 @@ class ElasticClustering:
 
     def cluster_to_topics(self, id):
         get_topics(get_titles_by_cluster(id))
-
-    def clean_tokens(self, text):
-        try:
-            tokens = word_tokenize(text)
-            tokens = [w.lower() for w in tokens]
-            table = str.maketrans('', '', string.punctuation)
-            stripped = [w.translate(table) for w in tokens]
-            words = [word for word in stripped if word.isalpha()]
-            words = [w for w in words if (len(w) in range(2, 12) and not w in stop_words)]
-            words = [porter.stem(w) for w in words]
-            return words
-        except:
-            return 'NC'
 
     def es_docs(self):
         res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
@@ -101,7 +61,7 @@ class ElasticClustering:
         used_lines = []
 
         for doc, id in self.es_docs():
-            tokens = self.clean_tokens(doc)
+            tokens = text_cleaner.clean_tokens(doc)
             if tokens != 'NC' and len(tokens) > 200:
                 used_lines.append(tokens)
                 vectors.append(self.model.infer_vector(tokens))
