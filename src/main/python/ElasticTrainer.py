@@ -1,23 +1,14 @@
 from elasticsearch import Elasticsearch, helpers
 from _config import ConfigMap
-import nltk
-import gensim
+
 import os
 from gensim.models.doc2vec import TaggedDocument
 from TextCleaner import TextCleaner
 
-nltk.download('punkt')
-from nltk.tokenize import word_tokenize
-import string
+import gensim
+from gensim.models import Phrases
+from gensim.models.word2vec import LineSentence
 
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-
-stop_words = set(stopwords.words('english'))
-
-from nltk.stem.porter import PorterStemmer
-
-porter = PorterStemmer()
 
 TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
@@ -34,31 +25,18 @@ class ElasticTrainer:
 
     def es_docs(self):
         res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
-                           query={"query": {"match_all": {}}},
-                           )
+                           query={"query": {"match_all": {}}})
         res = list(res)
         for hit in res:
             if es['textfield'] in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
+                text = text.replace('-\\n','')
                 text = text.replace('\\n', ' ')
                 id = hit["_id"]
                 yield text, id
 
-    def clean_tokens(self, text):
-        try:
-            tokens = word_tokenize(text)
-            tokens = [w.lower() for w in tokens]
-            table = str.maketrans('', '', string.punctuation)
-            stripped = [w.translate(table) for w in tokens]
-            words = [word for word in stripped if word.isalpha()]
-            words = [w for w in words if (len(w) in range(2, 12) and not w in stop_words)]
-            words = [porter.stem(w) for w in words]
-            return words
-        except:
-            return 'NC'
-
-    def train(self):
+    def train_with_tokens(self):
         for doc, id in self.es_docs():
             # tokens = self.clean_tokens(doc)
             tokens = text_cleaner.clean_tokens(doc)
@@ -81,7 +59,14 @@ class ElasticTrainer:
         model.save(self.model_file)
         model.save_word2vec_format(self.model_file + '.word2vec')
 
+    def save_sentences(self):
+        unigram_sentences_filepath = open(os.path.join(training['basedir'], 'unigram_sentences_all.txt'), 'w')
+        for doc, id in self.es_docs():
+            for sentence in text_cleaner.clean_sentences(doc):
+                unigram_sentences_filepath.write(sentence + '\n')
+
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
-    esTrainer.train()
+    # esTrainer.train_with_tokens()
+    esTrainer.save_sentences()

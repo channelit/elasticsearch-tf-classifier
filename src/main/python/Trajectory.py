@@ -2,7 +2,7 @@ from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
 
-MAX_LINES = 10000
+MAX_LINES = 1000
 NUM_GROUPS = 70
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
@@ -89,7 +89,7 @@ class Trajectory:
                 if 0 < linectr < MAX_LINES:
                     # p_start = Point((float(row[6]),float(row[5])))
                     # p_end = Point((float(row[10]),float(row[9])))
-                    p_start = [float(row[6]),float(row[5])]
+                    p_start = [float(row[6]),float(row[5]),float(row[10]),float(row[9])]
                     p_end = [float(row[10]),float(row[9])]
                     if not p_start in start_pos:
                         start_pos.append(p_start)
@@ -104,7 +104,6 @@ class Trajectory:
 
         start_pos, end_pos = self.points()
 
-        # tree = trajectory.GenerateTree(start_pos)
         knn_start = pysal.weights.KNN(start_pos, k = NUM_GROUPS)
         knn_end = pysal.weights.KNN(end_pos, k = NUM_GROUPS)
 
@@ -147,21 +146,20 @@ class Trajectory:
         import pandas as pd
 
         def centroids(locations):
-            db = DBSCAN(eps=0.2, min_samples=2).fit(start_pos)
             kms_per_radian = 6371.0088
             epsilon = 1.5 / kms_per_radian
-            db = DBSCAN(eps=epsilon, min_samples=1, algorithm='ball_tree', metric='haversine').fit(np.radians(start_pos))
+            db = DBSCAN(eps=2, min_samples=1).fit(locations)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
             print('Number of clusters: {}'.format(num_clusters))
-            for i, v in enumerate(start_pos):
+            for i, v in enumerate(locations):
                 clusters[cluster_labels[i]].append(v)
-            def get_centermost_point(cluster):
-                centroid = (MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y)
-                return tuple(centroid)
-            centermost_points = [get_centermost_point(c) for c in clusters]
-            return centermost_points
+            # def get_centermost_point(cluster):
+            #     centroid = (MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y)
+            #     return tuple(centroid)
+            # centermost_points = [get_centermost_point(c) for c in clusters]
+            return [0,0]
 
         start_pos, end_pos = self.points()
         self.plot_on_bokeh_dbscan(start_pos, end_pos, centroids(start_pos), centroids(end_pos))
@@ -210,16 +208,16 @@ class Trajectory:
             )
         )
 
-        circle = Circle(x="lon", y="lat", size=1, fill_color="blue", fill_alpha=0.8, line_color=None)
+        circle = Circle(x="lon", y="lat", size=1, fill_color="blue", fill_alpha=0.3, line_color=None)
         plot.add_glyph(source_start, circle)
 
-        circle = Circle(x="lon", y="lat", size=1, fill_color="green", fill_alpha=0.8, line_color=None)
+        circle = Circle(x="lon", y="lat", size=1, fill_color="green", fill_alpha=0.3, line_color=None)
         plot.add_glyph(source_end, circle)
 
-        circle = Circle(x="lon", y="lat", size=10, fill_color="blue", fill_alpha=0.1, line_color=None)
+        circle = Circle(x="lon", y="lat", size=50, fill_color="blue", fill_alpha=0.5, line_color=None)
         plot.add_glyph(source_circles_start, circle)
 
-        circle = Circle(x="lon", y="lat", size=10, fill_color="green", fill_alpha=0.1, line_color=None)
+        circle = Circle(x="lon", y="lat", size=50, fill_color="green", fill_alpha=0.5, line_color=None)
         plot.add_glyph(source_circles_end, circle)
 
         plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool())
