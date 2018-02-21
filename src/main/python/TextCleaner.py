@@ -43,7 +43,7 @@ class TextCleaner:
                              if not self.punct_space(token)])
 
     def punct_space(self, token):
-        return token.is_punct or token.is_space or token.like_num or token.is_stop
+        return token.is_punct or token.is_space or token.like_num or token.is_stop or token.__len__() < 5
 
     def clean_tokens(self, text):
         nlp_text = self.nlp_text(text)
@@ -55,6 +55,10 @@ class TextCleaner:
         nlp_text = self.nlp_text(text)
         sentences = [sent for sent in self.lemmatized_sentence_corpus(nlp_text)]
         return sentences
+
+    def filter_terms(self, terms):
+        terms = [term for term in terms if term not in spacy.lang.en.STOP_WORDS]
+        return terms
 
     # def clean_tokens(self, text):
     #     import nltk
