@@ -32,6 +32,7 @@ class ElasticTrainer:
         self.trigram_bow_filepath = os.path.join(training['basedir'], 'trigram_bow_corpus_all.mm')
         self.lda_model_filepath = os.path.join(training['basedir'], 'lda_model_all')
         self.LDAvis_data_filepath = os.path.join(training['basedir'], 'ldavis_prepared')
+        self.LDAvis_html_filepath = os.path.join(training['basedir'], 'ldavis.html')
 
     def es_docs(self):
         res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
@@ -152,7 +153,7 @@ class ElasticTrainer:
         lda.show_topic(1)
         lda.show_topic(2)
         LDAvis_prepared = pyLDAvis.gensim.prepare(lda, trigram_bow_corpus, trigram_dictionary)
-        pyLDAvis.show(LDAvis_prepared)
+        pyLDAvis.save_html(LDAvis_prepared, self.LDAvis_html_filepath)
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
