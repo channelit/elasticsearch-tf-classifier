@@ -46,7 +46,7 @@ class ElasticSummarizer:
                 }
             }
         }
-        res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
                            query=eval(query['summary']),
                            )
         res = list(res)

@@ -34,7 +34,7 @@ class ElasticSimilarity:
         self.model = gensim.models.Doc2Vec.load(self.model_file)
 
     def es_doc(self, doc_id):
-        res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
+        res = self.es.get(index=es['index'], http_auth=(es['user'], es['secret']), id=doc_id, doc_type=es['type'])
         text = eval(es['textfieldobj'])
         text = text.replace('\\n', ' ')
         return text

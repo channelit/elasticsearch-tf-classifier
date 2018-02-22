@@ -80,6 +80,7 @@ class Trajectory:
 
         start_pos = []
         end_pos = []
+        paths = []
 
         with open(file) as csvfile:
             readCSV = csv.reader(csvfile, delimiter=',')
@@ -89,20 +90,23 @@ class Trajectory:
                 if 0 < linectr < MAX_LINES:
                     # p_start = Point((float(row[6]),float(row[5])))
                     # p_end = Point((float(row[10]),float(row[9])))
-                    p_start = [float(row[6]),float(row[5]),float(row[10]),float(row[9])]
+                    p_start = [float(row[6]),float(row[5])]
                     p_end = [float(row[10]),float(row[9])]
+                    path = p_start + p_end
                     if not p_start in start_pos:
                         start_pos.append(p_start)
                     if not p_end in end_pos:
                         end_pos.append(p_end)
+                    paths.append(path)
                 if linectr > MAX_LINES:
                     break
                 linectr+=1
-        return start_pos, end_pos
+        return start_pos, end_pos, paths
 
     def trajectories_knn(self):
 
-        start_pos, end_pos = self.points()
+        start_pos, end_pos, paths = self.points()
+
 
         knn_start = pysal.weights.KNN(start_pos, k = NUM_GROUPS)
         knn_end = pysal.weights.KNN(end_pos, k = NUM_GROUPS)
@@ -145,23 +149,18 @@ class Trajectory:
         # from geopy.distance import great_circle
         import pandas as pd
 
-        def centroids(locations):
-            kms_per_radian = 6371.0088
-            epsilon = 1.5 / kms_per_radian
-            db = DBSCAN(eps=2, min_samples=1).fit(locations)
+        def centroids(paths):
+            db = DBSCAN(eps=0.00002).fit(paths)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
             print('Number of clusters: {}'.format(num_clusters))
             for i, v in enumerate(locations):
                 clusters[cluster_labels[i]].append(v)
-            # def get_centermost_point(cluster):
-            #     centroid = (MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y)
-            #     return tuple(centroid)
-            # centermost_points = [get_centermost_point(c) for c in clusters]
-            return [0,0]
 
-        start_pos, end_pos = self.points()
+        start_pos, end_pos, paths = self.points()
+
+        clusters = centroids(paths)
         self.plot_on_bokeh_dbscan(start_pos, end_pos, centroids(start_pos), centroids(end_pos))
 
 

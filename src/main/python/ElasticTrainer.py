@@ -20,7 +20,7 @@ class ElasticTrainer:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-        self.es = Elasticsearch([es['server']], port=es['port'])
+        self.es = Elasticsearch([es['server']], port=es['port'], http_auth=(es['user'], es['secret']))
         self.taggeddoc = []
         self.unigram_sentences_filepath = os.path.join(training['basedir'], 'unigram_sentences_all.txt')
         self.bigram_model_filepath = os.path.join(training['basedir'], 'bigram_model_all')
@@ -106,7 +106,6 @@ class ElasticTrainer:
             trigrams = u' '.join(trigrams)
             f.write(trigrams + '\n')
 
-
     def generate_trigrams(self):
         unigram_sentences = LineSentence(self.unigram_sentences_filepath)
         bigram_model = Phrases(unigram_sentences)
@@ -131,6 +130,8 @@ class ElasticTrainer:
         import pyLDAvis
         import pyLDAvis.gensim
         import warnings
+        import _pickle as pickle
+
         trigram_sentences = LineSentence(self.trigram_sentences_filepath)
         trigram_dictionary = Dictionary(trigram_sentences)
         # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
@@ -158,6 +159,6 @@ class ElasticTrainer:
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
     # esTrainer.train_with_tokens()
-    # esTrainer.save_sentences()
-    # esTrainer.save_sentences_trigram()
+    esTrainer.save_sentences()
+    esTrainer.save_sentences_trigram()
     esTrainer.generate_lda_topics()

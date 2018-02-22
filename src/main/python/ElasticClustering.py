@@ -43,7 +43,7 @@ class ElasticClustering:
         get_topics(get_titles_by_cluster(id))
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
         res = list(res)
