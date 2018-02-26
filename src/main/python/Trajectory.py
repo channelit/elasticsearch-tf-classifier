@@ -9,7 +9,7 @@ API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
 class Trajectory:
     def __init__(self):
-        self.json_filepath = os.path.join('../resources/html', 'features.json')
+        self.json_filepath = os.path.join('/data/logs', 'features.json')
         print("start")
 
     def get_tree(self, pts):
@@ -159,29 +159,22 @@ class Trajectory:
             for i, v in enumerate(paths):
                 clusters[cluster_labels[i]].append(v)
             return clusters
-
         start_pos, end_pos, paths = self.points()
-
         clusters = centroids(paths) # Array of [start_lat, start_lon, end_lat, end_lon]
-
         gc = self.createGeometry(clusters)
-
         self.createJsonFile(gc)
 
     def createGeometry(self, clusters):
         from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection
-        smallcluster = []
-        smallcluster.append(clusters[1])
-        geometries = FeatureCollection([[Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster] for cluster in smallcluster])
-        print(geometries)
+        geometries = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in clusters]
         return geometries
 
     def createJsonFile(self, gc):
         import geojson
-
-        f = open(self.json_filepath, 'w')
-        f.write(geojson.dumps(gc, sort_keys=True))
-        f.close()
+        for i, g in enumerate(gc):
+            f = open(self.json_filepath.replace('.json', '_' + str(i) + '.json'), 'w')
+            f.write(geojson.dumps(g, sort_keys=True))
+            f.close()
         pass
 
 
