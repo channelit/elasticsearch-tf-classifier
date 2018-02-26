@@ -37,6 +37,8 @@
     /* Map functions */
 
     var map;
+    var layerId=0;
+    var layerColors=['red','blue','green','purple'];
 
     function initMap() {
         // set up the map
@@ -48,8 +50,15 @@
 
     function loadGeoJsonString(geoString) {
         var geojson = JSON.parse(geoString);
-        map.data.addGeoJson(geojson);
+        var data_layer = new google.maps.Data({map: map});
+        data_layer.addGeoJson(geojson);
+        data_layer.setStyle({
+            fillColor: 'green',
+            strokeColor: layerColors[layerId],
+            strokeWeight: 1
+        });
         zoom(map);
+        layerId ++;
     }
 
     /**
