@@ -1,6 +1,7 @@
 from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
+import os
 
 MAX_LINES = 1000
 NUM_GROUPS = 70
@@ -8,6 +9,7 @@ API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 
 class Trajectory:
     def __init__(self):
+        self.json_filepath = os.path.join('../resources/html', 'features.json')
         print("start")
 
     def get_tree(self, pts):
@@ -145,83 +147,42 @@ class Trajectory:
         from sklearn import metrics
         from sklearn.datasets.samples_generator import make_blobs
         from sklearn.preprocessing import StandardScaler
-        from shapely.geometry import MultiPoint
         # from geopy.distance import great_circle
         import pandas as pd
 
         def centroids(paths):
-            db = DBSCAN(eps=0.00002).fit(paths)
+            db = DBSCAN(eps=0.02).fit(paths)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
             print('Number of clusters: {}'.format(num_clusters))
-            for i, v in enumerate(locations):
+            for i, v in enumerate(paths):
                 clusters[cluster_labels[i]].append(v)
+            return clusters
 
         start_pos, end_pos, paths = self.points()
 
-        clusters = centroids(paths)
-        self.plot_on_bokeh_dbscan(start_pos, end_pos, centroids(start_pos), centroids(end_pos))
+        clusters = centroids(paths) # Array of [start_lat, start_lon, end_lat, end_lon]
 
+        gc = self.createGeometry(clusters)
 
+        self.createJsonFile(gc)
 
-    def plot_on_bokeh_dbscan(self, starts, ends, centroid_start, centroid_end):
-        from bokeh.io import output_file, show
-        from bokeh.models import (
-            GMapPlot, GMapOptions, ColumnDataSource, GeoJSONDataSource, Circle, Segment, Quad, Range1d, PanTool, WheelZoomTool, BoxSelectTool
-        )
-        from bokeh.resources import INLINE
-        import bokeh.io
-        bokeh.io.output_notebook(INLINE)
+    def createGeometry(self, clusters):
+        from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection
+        smallcluster = []
+        smallcluster.append(clusters[1])
+        geometries = FeatureCollection([[Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster] for cluster in smallcluster])
+        print(geometries)
+        return geometries
 
-        map_options = GMapOptions(lat=40.7831, lng=-73.9712, map_type="roadmap", zoom=12)
+    def createJsonFile(self, gc):
+        import geojson
 
-        plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
-        plot.title.text = "New York"
-        plot.api_key = API_KEY
-
-        source_start = ColumnDataSource(
-            data=dict(
-                lat=[x[0] for x in starts],
-                lon=[y[1] for y in starts],
-            )
-        )
-        source_end = ColumnDataSource(
-            data=dict(
-                lat=[x[0] for x in ends],
-                lon=[y[1] for y in ends],
-            )
-        )
-
-        source_circles_start = ColumnDataSource(
-            data=dict(
-                lat=[x[0] for x in centroid_start],
-                lon=[y[1] for y in centroid_start]
-            )
-        )
-
-        source_circles_end = ColumnDataSource(
-            data=dict(
-                lat=[x[0] for x in centroid_end],
-                lon=[y[1] for y in centroid_end]
-            )
-        )
-
-        circle = Circle(x="lon", y="lat", size=1, fill_color="blue", fill_alpha=0.3, line_color=None)
-        plot.add_glyph(source_start, circle)
-
-        circle = Circle(x="lon", y="lat", size=1, fill_color="green", fill_alpha=0.3, line_color=None)
-        plot.add_glyph(source_end, circle)
-
-        circle = Circle(x="lon", y="lat", size=50, fill_color="blue", fill_alpha=0.5, line_color=None)
-        plot.add_glyph(source_circles_start, circle)
-
-        circle = Circle(x="lon", y="lat", size=50, fill_color="green", fill_alpha=0.5, line_color=None)
-        plot.add_glyph(source_circles_end, circle)
-
-        plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool())
-        output_file("/assets/gmap_plot_dbscan.html")
-        show(plot)
+        f = open(self.json_filepath, 'w')
+        f.write(geojson.dumps(gc, sort_keys=True))
+        f.close()
+        pass
 
 
 if __name__ == '__main__':

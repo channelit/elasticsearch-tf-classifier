@@ -1,4 +1,5 @@
 .idea
 *.iml
+*.json
 target
 data
