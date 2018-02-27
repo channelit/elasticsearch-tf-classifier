@@ -38,7 +38,7 @@
 
     var map;
     var layerId=0;
-    var layerColors=['red','blue','green','purple'];
+    var layerColors=['red','blue','green','yellow', 'orange'];
 
     function initMap() {
         // set up the map
@@ -57,7 +57,7 @@
             strokeColor: layerColors[layerId],
             strokeWeight: 1
         });
-        zoom(map);
+        // zoom(map);
         layerId ++;
     }
 

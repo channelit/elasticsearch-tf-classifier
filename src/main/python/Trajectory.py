@@ -3,9 +3,13 @@ from pysal.cg.shapes import Chain
 import pysal
 import os
 
-MAX_LINES = 1000
+MAX_LINES = 10000
 NUM_GROUPS = 70
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
+top = 49.3457868 # north lat
+left = -124.7844079 # west long
+right = -66.9513812 # east long
+bottom =  24.7433195 # south lat
 
 class Trajectory:
     def __init__(self):
@@ -90,26 +94,27 @@ class Trajectory:
             linectr = 0
             for row in readCSV:
                 if 0 < linectr < MAX_LINES:
-                    # p_start = Point((float(row[6]),float(row[5])))
-                    # p_end = Point((float(row[10]),float(row[9])))
-                    p_start = [float(row[6]),float(row[5])]
-                    p_end = [float(row[10]),float(row[9])]
-                    path = p_start + p_end
-                    if not p_start in start_pos:
-                        start_pos.append(p_start)
-                    if not p_end in end_pos:
-                        end_pos.append(p_end)
-                    paths.append(path)
+                    if self.is_wihin_range(float(row[6]),float(row[5])) and self.is_wihin_range(float(row[10]),float(row[9])):
+                        # p_start = Point((float(row[6]),float(row[5])))
+                        # p_end = Point((float(row[10]),float(row[9])))
+                        p_start = [float(row[6]),float(row[5])]
+                        p_end = [float(row[10]),float(row[9])]
+                        path = p_start + p_end
+                        if not p_start in start_pos:
+                            start_pos.append(p_start)
+                        if not p_end in end_pos:
+                            end_pos.append(p_end)
+                        paths.append(path)
                 if linectr > MAX_LINES:
                     break
                 linectr+=1
         return start_pos, end_pos, paths
 
+    def is_wihin_range(self, lat, lon):
+        return bottom <= lat <= top and left <= lon <= right
+
     def trajectories_knn(self):
-
         start_pos, end_pos, paths = self.points()
-
-
         knn_start = pysal.weights.KNN(start_pos, k = NUM_GROUPS)
         knn_end = pysal.weights.KNN(end_pos, k = NUM_GROUPS)
 
@@ -151,7 +156,7 @@ class Trajectory:
         import pandas as pd
 
         def centroids(paths):
-            db = DBSCAN(eps=0.02).fit(paths)
+            db = DBSCAN(eps=0.1).fit(paths)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
@@ -177,8 +182,42 @@ class Trajectory:
             f.close()
         pass
 
+    def distance_plot(self):
+        from sklearn.metrics.pairwise import euclidean_distances
+        from numpy import histogram
+        start_pos, end_pos, paths = self.points()
+        distances = euclidean_distances(paths, paths)
+        hist, edges = histogram(distances, bins=10, density=True)
+        self.plot_on_bokeh_hist(hist, edges)
+
+    def plot_on_bokeh_hist(self, hist, edges):
+        from bokeh.layouts import gridplot
+        from bokeh.plotting import figure, show, output_file
+
+        f = figure(title="Distribution of Distance Matrix", tools="save",  background_fill_color="#E8DDCB")
+
+        f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#036564", line_color="#033649")
+
+        f.legend.location = "center_right"
+        f.legend.background_fill_color = "darkgrey"
+        f.xaxis.axis_label = 'Distance'
+        f.yaxis.axis_label = 'Counts'
+
+        output_file('/data/logs/histogram.html', title="Distance Matrix")
+        show(gridplot(f, ncols=2, plot_width=1400, plot_height=800, toolbar_location=None))
+        pass
+
+    def neighbors_plot(self):
+        from sklearn.neighbors import radius_neighbors_graph
+        start_pos, end_pos, paths = self.points()
+        g = radius_neighbors_graph(paths, radius=0.15)
+        print(g)
+        pass
+
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    trajectory.trajectories_dbscan()
+    # trajectory.trajectories_dbscan()
+    # trajectory.distance_plot()
+    trajectory.neighbors_plot()
     print('done')
