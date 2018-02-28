@@ -187,19 +187,16 @@ class Trajectory:
         from numpy import histogram
         start_pos, end_pos, paths = self.points()
         distances = euclidean_distances(paths, paths)
-        hist, edges = histogram(distances, bins=10, density=True)
-        self.plot_on_bokeh_hist(hist, edges)
+        hist, edges = histogram(distances, bins=100, density=False)
+        self.plot_on_bokeh_hist('distance_hist.html', hist, edges)
 
-    def plot_on_bokeh_hist(self, hist, edges):
+    def plot_on_bokeh_hist(self, filename, hist, edges):
         from bokeh.layouts import gridplot
         from bokeh.plotting import figure, show, output_file
 
-        f = figure(title="Distribution of Distance Matrix", tools="save",  background_fill_color="#E8DDCB")
+        f = figure(title="Distribution of Distance Matrix", tools="save",  background_fill_color="#FFFFFF")
 
-        f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#036564", line_color="#033649")
-
-        f.legend.location = "center_right"
-        f.legend.background_fill_color = "darkgrey"
+        f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#33b5e5", line_color="#4285F4")
         f.xaxis.axis_label = 'Distance'
         f.yaxis.axis_label = 'Counts'
 
@@ -208,9 +205,12 @@ class Trajectory:
         pass
 
     def neighbors_plot(self):
+        from numpy import histogram
         from sklearn.neighbors import radius_neighbors_graph
         start_pos, end_pos, paths = self.points()
-        g = radius_neighbors_graph(paths, radius=0.15)
+        neighbors = radius_neighbors_graph(paths, radius=0.00015)
+        hist, edges = histogram(neighbors, bins=100, density=False)
+        self.plot_on_bokeh_hist('neighbor_hist.html', hist, edges)
         print(g)
         pass
 
