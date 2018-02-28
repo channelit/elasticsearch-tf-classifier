@@ -37,10 +37,9 @@ class ElasticTrainer:
         ctr = 0
         res = helpers.scan(index=es['index'], size=5, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}})
-        res = list(res)
         for hit in res:
             if es['textfield'] in hit["_source"]:
-                ctr +=1
+                ctr += 1
                 if ctr % 50 == 0:
                     print("ctr =", ctr)
                 if ctr > TRAIN_DOCS:
