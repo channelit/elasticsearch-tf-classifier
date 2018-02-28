@@ -2,10 +2,13 @@ from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
 import pysal
 import os
+from _config import ConfigMap
 
-MAX_LINES = 15000
+training = ConfigMap("Training")
+secret = ConfigMap("Secrets")
+MAX_LINES = int(training['size'])
 NUM_GROUPS = 70
-API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
+API_KEY=secret['google_maps_api_key']
 top = 49.3457868 # north lat
 left = -124.7844079 # west long
 right = -66.9513812 # east long
@@ -206,7 +209,7 @@ class Trajectory:
         f.yaxis.axis_label = y_label
 
         output_file('/data/logs/' + filename, title=title)
-        show(gridplot(f, ncols=2, plot_width=1400, plot_height=800, toolbar_location=None))
+        show(gridplot(f, ncols=2, plot_width=600, plot_height=400, toolbar_location=None))
         pass
 
     def neighbors_plot(self):

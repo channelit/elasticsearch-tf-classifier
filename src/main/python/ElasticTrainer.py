@@ -9,10 +9,9 @@ import gensim
 from gensim.models import Phrases
 from gensim.models.word2vec import LineSentence
 
-
-TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
+TRAIN_DOCS = int(training['size'])
 text_cleaner = TextCleaner()
 
 
