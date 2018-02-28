@@ -3,7 +3,7 @@ from pysal.cg.shapes import Chain
 import pysal
 import os
 
-MAX_LINES = 10000
+MAX_LINES = 15000
 NUM_GROUPS = 70
 API_KEY="AIzaSyDE74s0qo35vvq7jIs4zINqidd2z-6GqA0"
 top = 49.3457868 # north lat
@@ -185,39 +185,54 @@ class Trajectory:
     def distance_plot(self):
         from sklearn.metrics.pairwise import euclidean_distances
         from numpy import histogram
+        import gc
         start_pos, end_pos, paths = self.points()
+        del start_pos, end_pos
+        gc.collect()
         distances = euclidean_distances(paths, paths)
         hist, edges = histogram(distances, bins=100, density=False)
-        self.plot_on_bokeh_hist('distance_hist.html', hist, edges)
+        del distances
+        gc.collect()
+        self.plot_on_bokeh_hist('distance_hist.html', 'Distane', 'Counts', 'Distance Matrix', hist, edges)
 
-    def plot_on_bokeh_hist(self, filename, hist, edges):
+    def plot_on_bokeh_hist(self, filename, x_label, y_label, title, hist, edges):
         from bokeh.layouts import gridplot
         from bokeh.plotting import figure, show, output_file
 
-        f = figure(title="Distribution of Distance Matrix", tools="save",  background_fill_color="#FFFFFF")
+        f = figure(title=title, tools="save",  background_fill_color="#FFFFFF")
 
         f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#33b5e5", line_color="#4285F4")
-        f.xaxis.axis_label = 'Distance'
-        f.yaxis.axis_label = 'Counts'
+        f.xaxis.axis_label = x_label
+        f.yaxis.axis_label = y_label
 
-        output_file('/data/logs/histogram.html', title="Distance Matrix")
+        output_file('/data/logs/' + filename, title=title)
         show(gridplot(f, ncols=2, plot_width=1400, plot_height=800, toolbar_location=None))
         pass
 
     def neighbors_plot(self):
+        import gc
         from numpy import histogram
+        import numpy as np
         from sklearn.neighbors import radius_neighbors_graph
+
         start_pos, end_pos, paths = self.points()
-        neighbors = radius_neighbors_graph(paths, radius=0.00015)
-        hist, edges = histogram(neighbors, bins=100, density=False)
-        self.plot_on_bokeh_hist('neighbor_hist.html', hist, edges)
-        print(g)
+        del start_pos, end_pos
+        gc.collect()
+        neighbors = radius_neighbors_graph(paths, radius=0.15)
+        del paths
+        gc.collect()
+        neighbors = neighbors.toarray()
+        x = np.matrix(neighbors)
+        x = x.sum(axis=1)
+        counts = [d[0,0] for d in x]
+        hist, edges = histogram(counts, bins=10, density=False)
+        self.plot_on_bokeh_hist('neighbors_hist.html', '# of Neighbors', '# of Occurrance', 'Neighbors Within Radius', hist, edges)
         pass
 
 
 if __name__ == '__main__':
     trajectory = Trajectory()
     # trajectory.trajectories_dbscan()
-    # trajectory.distance_plot()
+    trajectory.distance_plot()
     trajectory.neighbors_plot()
     print('done')

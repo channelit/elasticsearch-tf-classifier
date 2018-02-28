@@ -158,7 +158,7 @@ class ElasticTrainer:
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
-    # esTrainer.train_with_tokens()
+    esTrainer.train_with_tokens()
     esTrainer.save_sentences()
     esTrainer.save_sentences_trigram()
     esTrainer.generate_lda_topics()

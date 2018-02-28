@@ -16,7 +16,7 @@ class TextCleaner:
             lexeme.is_stop = True
 
     def unicode(self, text):
-        return ''.join([i if ord(i) < 128 or i == '\n' else ' ' for i in text])
+        return ''.join([i if (i.isalpha() and ord(i) < 128) or i == '\n' else ' ' for i in text])
 
     def nlp_text(self, text):
         return self.nlp(self.unicode(text))
