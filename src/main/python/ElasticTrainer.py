@@ -34,11 +34,15 @@ class ElasticTrainer:
         self.LDAvis_html_filepath = os.path.join(training['basedir'], 'ldavis.html')
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m', client=self.es, preserve_order=True,
+        ctr = 0;
+        res = helpers.scan(index=es['index'], size=5, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}})
         res = list(res)
         for hit in res:
             if es['textfield'] in hit["_source"]:
+                ctr +=1
+                if ctr > TRAIN_DOCS:
+                    raise StopIteration
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
                 text = text.replace('-\\n','')
