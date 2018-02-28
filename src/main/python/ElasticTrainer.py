@@ -34,7 +34,9 @@ class ElasticTrainer:
         self.LDAvis_html_filepath = os.path.join(training['basedir'], 'ldavis.html')
 
     def es_docs(self):
-        ctr = 0;
+        ctr = 0
+        if ctr % 100 == 0:
+            print("ctr =", ctr)
         res = helpers.scan(index=es['index'], size=5, scroll='1m', client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}})
         res = list(res)
