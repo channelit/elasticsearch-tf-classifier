@@ -159,7 +159,7 @@ class Trajectory:
         import pandas as pd
 
         def centroids(paths):
-            db = DBSCAN(eps=0.1 ).fit(paths)
+            db = DBSCAN(eps=0.005, metric='euclidean').fit(paths)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
@@ -235,7 +235,7 @@ class Trajectory:
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    # trajectory.trajectories_dbscan()
+    trajectory.trajectories_dbscan()
     trajectory.distance_plot()
     trajectory.neighbors_plot()
     print('done')

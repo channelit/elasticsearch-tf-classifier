@@ -48,6 +48,7 @@ class ElasticTrainer:
                 text = eval(es['textfieldobj'])
                 text = text.replace('-\\n','')
                 text = text.replace('\\n', ' ')
+                text = text.replace('\n', ' ')
                 id = hit["_id"]
                 yield text, id
 
@@ -72,12 +73,15 @@ class ElasticTrainer:
         model.save_word2vec_format(self.model_file + '.word2vec')
 
     def train_with_trigrams(self):
+        trigram_model = Phrases.load(self.trigram_model_filepath)
+        bigram_model = Phrases.load(self.bigram_model_filepath)
         for doc, id in self.es_docs():
-            # tokens = self.clean_tokens(doc)
-            tokens = text_cleaner.clean_tokens(doc)
-            if tokens != 'NC' and len(tokens) > 200:
-                td = TaggedDocument(gensim.utils.to_unicode(str.encode(' '.join(tokens))).split(), [id])
-                self.taggeddoc.append(td)
+            unigrams = text_cleaner.clean_tokens(doc)
+            bigrams = bigram_model[unigrams]
+            trigrams = trigram_model[bigrams]
+            trigrams = text_cleaner.filter_terms(trigrams)
+            td = TaggedDocument(trigrams, [id])
+            self.taggeddoc.append(td)
         print ('Data Loading finished')
         print (len(self.taggeddoc), type(self.taggeddoc))
         model = gensim.models.Doc2Vec(self.taggeddoc, dm=0, iter=1, window=15, seed=1337, min_count=5, workers=4,
@@ -110,7 +114,7 @@ class ElasticTrainer:
             trigrams = u' '.join(trigrams)
             f.write(trigrams + '\n')
 
-    def generate_trigrams(self):
+    def generate_bigrams_trigrams(self):
         unigram_sentences = LineSentence(self.unigram_sentences_filepath)
         bigram_model = Phrases(unigram_sentences)
         bigram_model.save(self.bigram_model_filepath)
@@ -162,7 +166,9 @@ class ElasticTrainer:
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
-    esTrainer.train_with_tokens()
-    esTrainer.save_sentences()
-    esTrainer.save_sentences_trigram()
-    esTrainer.generate_lda_topics()
+    # esTrainer.train_with_tokens()
+    # esTrainer.save_sentences()
+    # esTrainer.generate_bigrams_trigrams()
+    # esTrainer.save_sentences_trigram()
+    # esTrainer.generate_lda_topics()
+    esTrainer.train_with_trigrams()

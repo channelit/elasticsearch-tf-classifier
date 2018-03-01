@@ -38,7 +38,7 @@
 
     var map;
     var layerId=0;
-    var layerColors=['red','blue','green','yellow', 'orange'];
+    var layerColors=['red','blue','green','maroon', 'orange', 'pink', 'purple', 'indianred', 'olive', 'navy'];
 
     function initMap() {
         // set up the map
@@ -53,7 +53,6 @@
         var data_layer = new google.maps.Data({map: map});
         data_layer.addGeoJson(geojson);
         data_layer.setStyle({
-            fillColor: 'green',
             strokeColor: layerColors[layerId],
             strokeWeight: 1
         });

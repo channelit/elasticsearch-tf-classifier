@@ -43,7 +43,7 @@ class TextCleaner:
                              if not self.punct_space(token)])
 
     def punct_space(self, token):
-        return token.is_punct or token.is_space or token.like_num or token.is_stop or token.__len__() < 5
+        return token.is_punct or token.is_space or token.like_num or token.__len__() < 5
 
     def clean_tokens(self, text):
         nlp_text = self.nlp_text(text)
