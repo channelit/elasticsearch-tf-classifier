@@ -23,7 +23,7 @@ porter = PorterStemmer()
 BATCH_SIZE = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
-query=ConfigMap("QueryTypes")
+query = ConfigMap("QueryTypes")
 
 
 class ElasticSummarizer:
@@ -36,17 +36,18 @@ class ElasticSummarizer:
     def es_docs(self):
         query_match_all = {"query": {"match_all": {}}}
         query_no_summary = {
-            "query" : {
-                "bool" : {
-                    "must_not" : [{
-                        "exists" : {
-                            "field" : "text_summary,error"
+            "query": {
+                "bool": {
+                    "must_not": [{
+                        "exists": {
+                            "field": "text_summary,error"
                         }
                     }]
                 }
             }
         }
-        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
+        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=BATCH_SIZE, scroll='1m',
+                           client=self.es, preserve_order=True,
                            query=eval(query['summary']),
                            )
         res = list(res)
@@ -79,7 +80,8 @@ class ElasticSummarizer:
                         "text_keywords": text_keywords.tolist()
                     }
                 }
-                update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,refresh=True)
+                update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id,
+                                                 _source=False, refresh=True)
                 print(update_response)
             except:
                 print("error")

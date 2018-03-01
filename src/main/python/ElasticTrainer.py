@@ -46,7 +46,7 @@ class ElasticTrainer:
                     raise StopIteration
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
-                text = text.replace('-\\n','')
+                text = text.replace('-\\n', '')
                 text = text.replace('\\n', ' ')
                 text = text.replace('\n', ' ')
                 id = hit["_id"]
@@ -96,14 +96,14 @@ class ElasticTrainer:
         model.save_word2vec_format(self.model_file + '.word2vec')
 
     def save_sentences(self):
-        f = open(self. unigram_sentences_filepath, 'w')
+        f = open(self.unigram_sentences_filepath, 'w')
         for doc, id in self.es_docs():
             for sentence in text_cleaner.clean_sentences(doc):
-               f.write(sentence + '\n')
+                f.write(sentence + '\n')
         f.close()
 
     def save_sentences_trigram(self):
-        f = open(self. trigram_sentences_filepath, 'w')
+        f = open(self.trigram_sentences_filepath, 'w')
         trigram_model = Phrases.load(self.trigram_model_filepath)
         bigram_model = Phrases.load(self.bigram_model_filepath)
         for doc, id in self.es_docs():
@@ -118,7 +118,7 @@ class ElasticTrainer:
         unigram_sentences = LineSentence(self.unigram_sentences_filepath)
         bigram_model = Phrases(unigram_sentences)
         bigram_model.save(self.bigram_model_filepath)
-        f = open(self. bigram_sentences_filepath, 'w')
+        f = open(self.bigram_sentences_filepath, 'w')
         for unigram_sentence in unigram_sentences:
             bigram_sentence = u' '.join(bigram_model[unigram_sentence])
             f.write(bigram_sentence + '\n')
@@ -126,11 +126,10 @@ class ElasticTrainer:
         bigram_sentences = LineSentence(self.bigram_sentences_filepath)
         trigram_model = Phrases(bigram_sentences)
         trigram_model.save(self.trigram_model_filepath)
-        f = open(self. trigram_sentences_filepath, 'w')
+        f = open(self.trigram_sentences_filepath, 'w')
         for bigram_sentence in bigram_sentences:
             trigram_sentence = u' '.join(trigram_model[bigram_sentence])
             f.write(trigram_sentence + '\n')
-
 
     def generate_lda_topics(self):
         from gensim.corpora import Dictionary, MmCorpus
@@ -145,10 +144,12 @@ class ElasticTrainer:
         # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
         trigram_dictionary.compactify()
         trigram_dictionary.save(self.trigram_dictionary_filepath)
+
         def trigram_bow_generator(filepath):
             for sentence in LineSentence(filepath):
                 yield trigram_dictionary.doc2bow(sentence)
-        MmCorpus.serialize(self.trigram_bow_filepath,trigram_bow_generator(self.trigram_sentences_filepath))
+
+        MmCorpus.serialize(self.trigram_bow_filepath, trigram_bow_generator(self.trigram_sentences_filepath))
         trigram_bow_corpus = MmCorpus(self.trigram_bow_filepath)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
@@ -163,6 +164,7 @@ class ElasticTrainer:
         lda.show_topic(2)
         LDAvis_prepared = pyLDAvis.gensim.prepare(lda, trigram_bow_corpus, trigram_dictionary)
         pyLDAvis.save_html(LDAvis_prepared, self.LDAvis_html_filepath)
+
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()

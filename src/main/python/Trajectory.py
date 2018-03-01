@@ -8,11 +8,12 @@ training = ConfigMap("Training")
 secret = ConfigMap("Secrets")
 MAX_LINES = int(training['size'])
 NUM_GROUPS = 70
-API_KEY=secret['google_maps_api_key']
-top = 49.3457868 # north lat
-left = -124.7844079 # west long
-right = -66.9513812 # east long
-bottom =  24.7433195 # south lat
+API_KEY = secret['google_maps_api_key']
+top = 49.3457868  # north lat
+left = -124.7844079  # west long
+right = -66.9513812  # east long
+bottom = 24.7433195  # south lat
+
 
 class Trajectory:
     def __init__(self):
@@ -26,7 +27,8 @@ class Trajectory:
     def plot_on_bokeh(self, starts, ends, bboxes_start, bboxes_end):
         from bokeh.io import output_file, show
         from bokeh.models import (
-            GMapPlot, GMapOptions, ColumnDataSource, GeoJSONDataSource, Circle, Segment, Quad, Range1d, PanTool, WheelZoomTool, BoxSelectTool
+            GMapPlot, GMapOptions, ColumnDataSource, GeoJSONDataSource, Circle, Segment, Quad, Range1d, PanTool,
+            WheelZoomTool, BoxSelectTool
         )
         from bokeh.resources import INLINE
         import bokeh.io
@@ -53,17 +55,17 @@ class Trajectory:
 
         source_circles_start = ColumnDataSource(
             data=dict(
-                lon=[b.lower + b.height/2 for b in bboxes_start],
-                lat=[b.left + b.width/2 for b in bboxes_start],
-                radius=[max(b.width, b.height)/2 for b in bboxes_start]
+                lon=[b.lower + b.height / 2 for b in bboxes_start],
+                lat=[b.left + b.width / 2 for b in bboxes_start],
+                radius=[max(b.width, b.height) / 2 for b in bboxes_start]
             )
         )
 
         source_circles_end = ColumnDataSource(
             data=dict(
-                lon=[b.lower + b.height/2 for b in bboxes_end],
-                lat=[b.left + b.width/2 for b in bboxes_end],
-                radius=[max(b.width, b.height)/2 for b in bboxes_end]
+                lon=[b.lower + b.height / 2 for b in bboxes_end],
+                lat=[b.left + b.width / 2 for b in bboxes_end],
+                radius=[max(b.width, b.height) / 2 for b in bboxes_end]
             )
         )
 
@@ -97,11 +99,12 @@ class Trajectory:
             linectr = 0
             for row in readCSV:
                 if 0 < linectr < MAX_LINES:
-                    if self.is_wihin_range(float(row[6]),float(row[5])) and self.is_wihin_range(float(row[10]),float(row[9])):
+                    if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
+                                                                                                 float(row[9])):
                         # p_start = Point((float(row[6]),float(row[5])))
                         # p_end = Point((float(row[10]),float(row[9])))
-                        p_start = [float(row[6]),float(row[5])]
-                        p_end = [float(row[10]),float(row[9])]
+                        p_start = [float(row[6]), float(row[5])]
+                        p_end = [float(row[10]), float(row[9])]
                         path = p_start + p_end
                         if not p_start in start_pos:
                             start_pos.append(p_start)
@@ -110,7 +113,7 @@ class Trajectory:
                         paths.append(path)
                 if linectr > MAX_LINES:
                     break
-                linectr+=1
+                linectr += 1
         return start_pos, end_pos, paths
 
     def is_wihin_range(self, lat, lon):
@@ -118,8 +121,8 @@ class Trajectory:
 
     def trajectories_knn(self):
         start_pos, end_pos, paths = self.points()
-        knn_start = pysal.weights.KNN(start_pos, k = NUM_GROUPS)
-        knn_end = pysal.weights.KNN(end_pos, k = NUM_GROUPS)
+        knn_start = pysal.weights.KNN(start_pos, k=NUM_GROUPS)
+        knn_end = pysal.weights.KNN(end_pos, k=NUM_GROUPS)
 
         start_groups = []
         end_groups = []
@@ -131,7 +134,7 @@ class Trajectory:
             start_groups.append(start_group)
 
         for n in knn_end.neighbors:
-            end_group= []
+            end_group = []
             for i in knn_end.neighbors[n]:
                 end_group.append(end_pos[i])
             end_groups.append(end_group)
@@ -167,14 +170,17 @@ class Trajectory:
             for i, v in enumerate(paths):
                 clusters[cluster_labels[i]].append(v)
             return clusters
+
         start_pos, end_pos, paths = self.points()
-        clusters = centroids(paths) # Array of [start_lat, start_lon, end_lat, end_lon]
+        clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
         gc = self.createGeometry(clusters)
         self.createJsonFile(gc)
 
     def createGeometry(self, clusters):
         from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection
-        geometries = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in clusters]
+        geometries = [FeatureCollection(
+            [Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in
+                      clusters]
         return geometries
 
     def createJsonFile(self, gc):
@@ -202,7 +208,7 @@ class Trajectory:
         from bokeh.layouts import gridplot
         from bokeh.plotting import figure, show, output_file
 
-        f = figure(title=title, tools="save",  background_fill_color="#FFFFFF")
+        f = figure(title=title, tools="save", background_fill_color="#FFFFFF")
 
         f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#33b5e5", line_color="#4285F4")
         f.xaxis.axis_label = x_label
@@ -227,9 +233,10 @@ class Trajectory:
         neighbors = neighbors.toarray()
         x = np.matrix(neighbors)
         x = x.sum(axis=1)
-        counts = [d[0,0] for d in x]
+        counts = [d[0, 0] for d in x]
         hist, edges = histogram(counts, bins=10, density=False)
-        self.plot_on_bokeh_hist('neighbors_hist.html', '# of Neighbors', '# of Occurrance', 'Neighbors Within Radius', hist, edges)
+        self.plot_on_bokeh_hist('neighbors_hist.html', '# of Neighbors', '# of Occurrance', 'Neighbors Within Radius',
+                                hist, edges)
         pass
 
 

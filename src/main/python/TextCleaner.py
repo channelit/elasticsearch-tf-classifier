@@ -1,15 +1,14 @@
-
 import spacy
 
 noisy_pos_tags = ['PROP']
 min_token_length = 5
+
 
 class TextCleaner:
 
     def __init__(self):
         my_stop_words = [u'say', u'\'s', u'Mr', u'be', u'said', u'says', u'saying']
         self.nlp = spacy.load("en_core_web_sm")
-
 
         for stopword in my_stop_words:
             lexeme = self.nlp.vocab[stopword]
@@ -21,7 +20,6 @@ class TextCleaner:
     def nlp_text(self, text):
         return self.nlp(self.unicode(text))
 
-
     def isNoise(self, token):
         is_noise = False
         if token.pos_ in noisy_pos_tags:
@@ -32,7 +30,7 @@ class TextCleaner:
             is_noise = True
         return is_noise
 
-    def cleanup(self, token, lower = True):
+    def cleanup(self, token, lower=True):
         if lower:
             token = token.lower()
         return token.strip()
@@ -81,6 +79,7 @@ class TextCleaner:
     #         return words
     #     except:
     #         return 'NC'
+
 
 if __name__ == "__main__":
     print("In Text Cleaner")

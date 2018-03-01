@@ -22,7 +22,7 @@ TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 BATCH_SIZE = 15
-query=ConfigMap("QueryTypes")
+query = ConfigMap("QueryTypes")
 
 
 class ElasticSimilarity:
@@ -55,11 +55,11 @@ class ElasticSimilarity:
     def es_docs(self):
         query_match_all = {"query": {"match_all": {}}}
         query_no_similar = {
-            "query" : {
-                "bool" : {
-                    "must_not" : [{
-                        "exists" : {
-                            "field" : "similar_docs,error"
+            "query": {
+                "bool": {
+                    "must_not": [{
+                        "exists": {
+                            "field": "similar_docs,error"
                         }
                     }]
                 }
@@ -99,10 +99,12 @@ class ElasticSimilarity:
                         "similar_docs": similar_ids
                     }
                 }
-                update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id, _source=False,refresh=True)
+                update_response = self.es.update(index=es['index'], doc_type=es['type'], body=body, id=id,
+                                                 _source=False, refresh=True)
                 print(update_response)
             except:
                 print("error")
+
 
 if __name__ == '__main__':
     esSimilarity = ElasticSimilarity()
