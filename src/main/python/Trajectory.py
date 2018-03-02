@@ -1,11 +1,24 @@
 from pysal.cg.shapes import Point
 from pysal.cg.shapes import Chain
+import scipy
 import pysal
 import os
 from _config import ConfigMap
+import numpy as np
+import numpy.ma as ma
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
+from sklearn.datasets.samples_generator import make_blobs
+from sklearn.preprocessing import StandardScaler
+# from geopy.distance import great_circle
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics.pairwise import euclidean_distances
+from scipy.spatial.distance import cdist
 
 training = ConfigMap("Training")
 secret = ConfigMap("Secrets")
+matric='cosine'
 MAX_LINES = int(training['size'])
 NUM_GROUPS = 70
 API_KEY = secret['google_maps_api_key']
@@ -153,16 +166,13 @@ class Trajectory:
         self.plot_on_bokeh(start_pos, end_pos, bboxs_start, bboxs_end)
 
     def trajectories_dbscan(self):
-        import numpy as np
-        from sklearn.cluster import DBSCAN
-        from sklearn import metrics
-        from sklearn.datasets.samples_generator import make_blobs
-        from sklearn.preprocessing import StandardScaler
-        # from geopy.distance import great_circle
-        import pandas as pd
 
         def centroids(paths):
-            db = DBSCAN(eps=0.005, metric='euclidean').fit(paths)
+            distances = cosine_distances(paths)
+            print(distances)
+            distances = cdist(paths, paths, 'cosine')
+            print(distances)
+            db = DBSCAN(eps=0.005, metric='precomputed').fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels))
             clusters = [[] for n in range(num_clusters)]
@@ -192,17 +202,21 @@ class Trajectory:
         pass
 
     def distance_plot(self):
-        from sklearn.metrics.pairwise import euclidean_distances
         from numpy import histogram
         import gc
         start_pos, end_pos, paths = self.points()
         del start_pos, end_pos
         gc.collect()
-        distances = euclidean_distances(paths, paths)
-        hist, edges = histogram(distances, bins=100, density=False)
-        del distances
-        gc.collect()
-        self.plot_on_bokeh_hist('distance_hist.html', 'Distane', 'Counts', 'Distance Matrix', hist, edges)
+        hist, edges = histogram(paths, bins=100, density=False)
+        self.plot_on_bokeh_hist('distance_hist.html', 'Distance', 'Counts', 'Distance Matrix', hist, edges)
+        distances = euclidean_distances(paths)
+        m_distances = ma.masked_where(distances == 0, distances)
+        print(distances)
+        print(m_distances)
+        min_distances = m_distances.min(0)
+        min_distances[::-1].sort()
+        print(min_distances)
+        self.plot_on_bokeh_hist('closest_neighbor.html', 'Distance', 'Path', 'Closest Neighbor Distances', min_distances, [])
 
     def plot_on_bokeh_hist(self, filename, x_label, y_label, title, hist, edges):
         from bokeh.layouts import gridplot
@@ -210,7 +224,10 @@ class Trajectory:
 
         f = figure(title=title, tools="save", background_fill_color="#FFFFFF")
 
-        f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#33b5e5", line_color="#4285F4")
+        if len(edges) > 0 :
+            f.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#33b5e5", line_color="#4285F4")
+        else:
+            f.line(y=hist, x=np.arange(len(hist)), line_color="#4285F4")
         f.xaxis.axis_label = x_label
         f.yaxis.axis_label = y_label
 
@@ -242,7 +259,7 @@ class Trajectory:
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    trajectory.trajectories_dbscan()
     trajectory.distance_plot()
     trajectory.neighbors_plot()
+    trajectory.trajectories_dbscan()
     print('done')
