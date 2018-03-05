@@ -16,6 +16,7 @@ NUM_CLUSTERS = 5
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 TRAIN_DOCS = int(training['size'])
+BATCH_SIZE = 20
 
 class ElasticClustering:
 
@@ -44,12 +45,12 @@ class ElasticClustering:
         get_topics(get_titles_by_cluster(id))
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m',
+        res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m',
                            client=self.es, preserve_order=True,
-                           query={"query": {"match_all": {}}},
-                           )
+                           query={"query": {"match_all": {}}})
         ctr = 0
         for hit in res:
+            ctr += 1
             if ctr % 50 == 0:
                 print("ctr =", ctr)
             if ctr > TRAIN_DOCS:
