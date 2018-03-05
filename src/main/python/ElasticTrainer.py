@@ -8,6 +8,7 @@ from TextCleaner import TextCleaner
 import gensim
 from gensim.models import Phrases
 from gensim.models.word2vec import LineSentence
+from gensim.models import Word2Vec
 
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
@@ -32,6 +33,7 @@ class ElasticTrainer:
         self.lda_model_filepath = os.path.join(training['basedir'], 'lda_model_all')
         self.LDAvis_data_filepath = os.path.join(training['basedir'], 'ldavis_prepared')
         self.LDAvis_html_filepath = os.path.join(training['basedir'], 'ldavis.html')
+        self.word2vec_filepath = os.path.join(training['basedir'], 'word2vec_model_all')
 
     def es_docs(self):
         ctr = 0
@@ -165,6 +167,19 @@ class ElasticTrainer:
         LDAvis_prepared = pyLDAvis.gensim.prepare(lda, trigram_bow_corpus, trigram_dictionary)
         pyLDAvis.save_html(LDAvis_prepared, self.LDAvis_html_filepath)
 
+    def generate_word2vec(self):
+        trigram_sentences = LineSentence(self.trigram_sentences_filepath)
+        # word2vec = Word2Vec(trigram_sentences)
+        word2vec = Word2Vec(trigram_sentences, size=100, window=5, min_count=20, sg=1, workers=4)
+        word2vec.save(self.word2vec_filepath)
+        for i in range(1,12):
+            word2vec.train(trigram_sentences, total_examples=word2vec.corpus_count, epochs=i)
+            word2vec.save(self.word2vec_filepath)
+
+        word2vec = Word2Vec.load(self.word2vec_filepath)
+        word2vec.init_sims()
+        pass
+
 
 if __name__ == '__main__':
     esTrainer = ElasticTrainer()
@@ -173,4 +188,5 @@ if __name__ == '__main__':
     # esTrainer.generate_bigrams_trigrams()
     # esTrainer.save_sentences_trigram()
     # esTrainer.generate_lda_topics()
-    esTrainer.train_with_trigrams()
+    esTrainer.generate_word2vec()
+    # esTrainer.train_with_trigrams()

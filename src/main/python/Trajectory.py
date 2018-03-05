@@ -18,7 +18,7 @@ from scipy.spatial.distance import cdist
 
 training = ConfigMap("Training")
 secret = ConfigMap("Secrets")
-matric='cosine'
+matric='euclidean'
 MAX_LINES = int(training['size'])
 NUM_GROUPS = 70
 API_KEY = secret['google_maps_api_key']
@@ -168,17 +168,17 @@ class Trajectory:
     def trajectories_dbscan(self):
 
         def centroids(paths):
-            distances = cosine_distances(paths)
-            print(distances)
-            distances = cdist(paths, paths, 'cosine')
-            print(distances)
-            db = DBSCAN(eps=0.005, metric='precomputed').fit(distances)
+            # distances = euclidean_distances(paths)
+            # distances = cdist(paths, paths, 'euclidean')
+            db = DBSCAN(eps=0.005, metric='euclidean', min_samples=10).fit(paths)
             cluster_labels = db.labels_
-            num_clusters = len(set(cluster_labels))
+            num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+            unique_labels = set(cluster_labels)
             clusters = [[] for n in range(num_clusters)]
             print('Number of clusters: {}'.format(num_clusters))
             for i, v in enumerate(paths):
-                clusters[cluster_labels[i]].append(v)
+                if cluster_labels[i] != -1:
+                    clusters[cluster_labels[i]].append(v)
             return clusters
 
         start_pos, end_pos, paths = self.points()
@@ -211,11 +211,8 @@ class Trajectory:
         self.plot_on_bokeh_hist('distance_hist.html', 'Distance', 'Counts', 'Distance Matrix', hist, edges)
         distances = euclidean_distances(paths)
         m_distances = ma.masked_where(distances == 0, distances)
-        print(distances)
-        print(m_distances)
         min_distances = m_distances.min(0)
         min_distances[::-1].sort()
-        print(min_distances)
         self.plot_on_bokeh_hist('closest_neighbor.html', 'Distance', 'Path', 'Closest Neighbor Distances', min_distances, [])
 
     def plot_on_bokeh_hist(self, filename, x_label, y_label, title, hist, edges):
@@ -244,7 +241,7 @@ class Trajectory:
         start_pos, end_pos, paths = self.points()
         del start_pos, end_pos
         gc.collect()
-        neighbors = radius_neighbors_graph(paths, radius=0.15)
+        neighbors = radius_neighbors_graph(paths, radius=0.05)
         del paths
         gc.collect()
         neighbors = neighbors.toarray()
@@ -259,7 +256,7 @@ class Trajectory:
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    trajectory.distance_plot()
-    trajectory.neighbors_plot()
+    # trajectory.distance_plot()
+    # trajectory.neighbors_plot()
     trajectory.trajectories_dbscan()
     print('done')
