@@ -24,7 +24,7 @@ BATCH_SIZE = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 query = ConfigMap("QueryTypes")
-
+TRAIN_DOCS = int(training['size'])
 
 class ElasticSummarizer:
 
@@ -50,8 +50,13 @@ class ElasticSummarizer:
                            client=self.es, preserve_order=True,
                            query=eval(query['summary']),
                            )
-        res = list(res)
+        ctr = 0
         for hit in res:
+            ctr += 1
+            if ctr % 50 == 0:
+                print("ctr =", ctr)
+            if ctr > TRAIN_DOCS:
+                raise StopIteration
             if es['textfield'] in hit["_source"]:
                 text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ').replace('\\t', ' ')

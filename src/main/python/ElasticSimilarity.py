@@ -18,12 +18,11 @@ from nltk.stem.porter import PorterStemmer
 
 porter = PorterStemmer()
 
-TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
 BATCH_SIZE = 15
 query = ConfigMap("QueryTypes")
-
+TRAIN_DOCS = int(training['size'])
 
 class ElasticSimilarity:
 
@@ -68,8 +67,13 @@ class ElasticSimilarity:
         res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m', client=self.es, preserve_order=True,
                            query=eval(query['similarity']))
 
-        res = list(res)
+        ctr = 0
         for hit in res:
+            ctr += 1
+            if ctr % 50 == 0:
+                print("ctr =", ctr)
+            if ctr > TRAIN_DOCS:
+                raise StopIteration
             if es['textfield'] in hit["_source"]:
                 text = eval(es['textfieldobj'])
                 text = text.replace('\\n', ' ').replace('\\t', ' ')

@@ -13,10 +13,9 @@ from _config import ConfigMap
 
 NUM_CLUSTERS = 5
 
-TRAIN_DOCS = 15
 es = ConfigMap("ElasticSearch")
 training = ConfigMap("Training")
-
+TRAIN_DOCS = int(training['size'])
 
 class ElasticClustering:
 
@@ -49,8 +48,12 @@ class ElasticClustering:
                            client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
-        res = list(res)
+        ctr = 0
         for hit in res:
+            if ctr % 50 == 0:
+                print("ctr =", ctr)
+            if ctr > TRAIN_DOCS:
+                raise StopIteration
             if es['textfield'] in hit["_source"]:
                 # print("%(category)s %(text)s" % hit["_source"])
                 text = eval(es['textfieldobj'])
