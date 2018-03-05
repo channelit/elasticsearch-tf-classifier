@@ -30,7 +30,7 @@ class ElasticSummarizer:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-        self.es = Elasticsearch([es['server']], port=es['port'])
+        self.es = Elasticsearch([es['server']], port=es['port'], http_auth=(es['user'], es['secret']))
         self.taggeddoc = []
 
     def es_docs(self):
@@ -46,7 +46,7 @@ class ElasticSummarizer:
                 }
             }
         }
-        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=BATCH_SIZE, scroll='1m',
+        res = helpers.scan(index=es['index'], size=BATCH_SIZE, scroll='1m',
                            client=self.es, preserve_order=True,
                            query=eval(query['summary']),
                            )

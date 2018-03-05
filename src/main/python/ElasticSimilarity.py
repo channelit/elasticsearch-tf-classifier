@@ -29,12 +29,12 @@ class ElasticSimilarity:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-        self.es = Elasticsearch([es['server']], port=es['port'])
+        self.es = Elasticsearch([es['server']], port=es['port'], http_auth=(es['user'], es['secret']))
         self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
         self.model = gensim.models.Doc2Vec.load(self.model_file)
 
     def es_doc(self, doc_id):
-        res = self.es.get(index=es['index'], http_auth=(es['user'], es['secret']), id=doc_id, doc_type=es['type'])
+        res = self.es.get(index=es['index'], id=doc_id, doc_type=es['type'])
         text = eval(es['textfieldobj'])
         text = text.replace('\\n', ' ')
         return text

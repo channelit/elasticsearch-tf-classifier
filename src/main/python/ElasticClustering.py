@@ -22,7 +22,7 @@ class ElasticClustering:
 
     def __init__(self):
         self.model_file = os.path.join(training['basedir'], 'doc_model')
-        self.es = Elasticsearch([es['server']], port=es['port'])
+        self.es = Elasticsearch([es['server']], port=es['port'], http_auth=(es['user'], es['secret']))
         self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.model_file + '.word2vec')
         self.model = gensim.models.Doc2Vec.load(self.model_file)
 
@@ -45,7 +45,7 @@ class ElasticClustering:
         get_topics(get_titles_by_cluster(id))
 
     def es_docs(self):
-        res = helpers.scan(index=es['index'], http_auth=(es['user'], es['secret']), size=TRAIN_DOCS, scroll='1m',
+        res = helpers.scan(index=es['index'], size=TRAIN_DOCS, scroll='1m',
                            client=self.es, preserve_order=True,
                            query={"query": {"match_all": {}}},
                            )
