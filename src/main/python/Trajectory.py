@@ -281,11 +281,10 @@ class Trajectory:
                 return min(abs(o[0] - o[2]), abs(o[1] - o[3]))
             min_of_two = min(min_diff(u), min_diff(v))
             return min_of_two if min_of_two > 0 else -1
-
         def f(u, v):
             return distance.euclidean(u,v)/min_dist(u,v)
-        # distances = cdist(paths, paths, f)
-        distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
+        distances = cdist(paths, paths, f)
+        # distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
         return distances
 
 
