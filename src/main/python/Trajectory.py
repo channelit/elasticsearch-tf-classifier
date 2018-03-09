@@ -7,6 +7,7 @@ from _config import ConfigMap
 import numpy as np
 import numpy.ma as ma
 from sklearn.cluster import DBSCAN
+import hdbscan
 from sklearn import metrics
 from sklearn.datasets.samples_generator import make_blobs
 from sklearn.preprocessing import StandardScaler
@@ -15,6 +16,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.spatial.distance import cdist
+from scipy.spatial import distance
 
 training = ConfigMap("Training")
 secret = ConfigMap("Secrets")
@@ -166,12 +168,32 @@ class Trajectory:
         self.plot_on_bokeh(start_pos, end_pos, bboxs_start, bboxs_end)
 
     def trajectories_dbscan(self):
-
         def centroids(paths):
             # distances = euclidean_distances(paths)
             # distances = cdist(paths, paths, 'euclidean')
-            db = DBSCAN(eps=0.005, metric='euclidean', min_samples=10).fit(paths)
+            distances = self.custom_dist(paths)
+            db = DBSCAN(eps=0.002, metric='precomputed', min_samples=5).fit(distances)
             cluster_labels = db.labels_
+            num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+            unique_labels = set(cluster_labels)
+            clusters = [[] for n in range(num_clusters)]
+            print('Number of clusters: {}'.format(num_clusters))
+            for i, v in enumerate(paths):
+                if cluster_labels[i] != -1:
+                    clusters[cluster_labels[i]].append(v)
+            return clusters
+
+        start_pos, end_pos, paths = self.points()
+        clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
+        gc = self.createGeometry(clusters)
+        self.createJsonFile(gc)
+
+    def trajectories_hdbscan(self):
+        def centroids(paths):
+            # distances = euclidean_distances(paths)
+            # distances = cdist(paths, paths, 'euclidean')
+            clusterer = hdbscan.HDBSCAN(min_cluster_size=2)
+            cluster_labels = clusterer.fit_predict(paths)
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
             clusters = [[] for n in range(num_clusters)]
@@ -241,7 +263,7 @@ class Trajectory:
         start_pos, end_pos, paths = self.points()
         del start_pos, end_pos
         gc.collect()
-        neighbors = radius_neighbors_graph(paths, radius=0.05)
+        neighbors = radius_neighbors_graph(paths, radius=0.005)
         del paths
         gc.collect()
         neighbors = neighbors.toarray()
@@ -253,10 +275,24 @@ class Trajectory:
                                 hist, edges)
         pass
 
+    def custom_dist(self, paths):
+        def min_dist(u,v):
+            def min_diff(o):
+                return min(abs(o[0] - o[2]), abs(o[1] - o[3]))
+            min_of_two = min(min_diff(u), min_diff(v))
+            return min_of_two if min_of_two > 0 else -1
+
+        def f(u, v):
+            return distance.euclidean(u,v)/min_dist(u,v)
+        # distances = cdist(paths, paths, f)
+        distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
+        return distances
+
 
 if __name__ == '__main__':
     trajectory = Trajectory()
     # trajectory.distance_plot()
     # trajectory.neighbors_plot()
     trajectory.trajectories_dbscan()
+    # trajectory.trajectories_hdbscan()
     print('done')
