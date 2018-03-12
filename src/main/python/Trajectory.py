@@ -172,7 +172,7 @@ class Trajectory:
             # distances = euclidean_distances(paths)
             # distances = cdist(paths, paths, 'euclidean')
             distances = self.custom_dist(paths)
-            db = DBSCAN(eps=0.002, metric='precomputed', min_samples=5).fit(distances)
+            db = DBSCAN(metric='precomputed', min_samples=5).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
@@ -231,7 +231,8 @@ class Trajectory:
         gc.collect()
         hist, edges = histogram(paths, bins=100, density=False)
         self.plot_on_bokeh_hist('distance_hist.html', 'Distance', 'Counts', 'Distance Matrix', hist, edges)
-        distances = euclidean_distances(paths)
+        # distances = euclidean_distances(paths)
+        distances = self.custom_dist(paths)
         m_distances = ma.masked_where(distances == 0, distances)
         min_distances = m_distances.min(0)
         min_distances[::-1].sort()
@@ -279,10 +280,23 @@ class Trajectory:
         def min_dist(u,v):
             def min_diff(o):
                 return min(abs(o[0] - o[2]), abs(o[1] - o[3]))
-            min_of_two = min(min_diff(u), min_diff(v))
-            return min_of_two if min_of_two > 0 else -1
+            u_dist = min_diff(u)
+            v_dist = min_diff(v)
+            if u_dist > 0 and v_dist>0:
+                return min(min_diff(u), min_diff(v))
+            if u_dist == 0 and v_dist > 0:
+                return v_dist
+            if v_dist == 0 and u_dist > 0:
+                return u_dist
+            if v_dist == 0 and v_dist ==0:
+                return -1
+            return min(min_diff(u), min_diff(v))
         def f(u, v):
-            return distance.euclidean(u,v)/min_dist(u,v)
+            min_delta = min_dist(u,v)
+            if min_delta > 0:
+                return distance.euclidean(u,v)/min_dist(u,v)
+            print('delta is zero')
+            return 0
         distances = cdist(paths, paths, f)
         # distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
         return distances
@@ -290,8 +304,8 @@ class Trajectory:
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    # trajectory.distance_plot()
+    trajectory.distance_plot()
     # trajectory.neighbors_plot()
-    trajectory.trajectories_dbscan()
+    # trajectory.trajectories_sdbscan()
     # trajectory.trajectories_hdbscan()
     print('done')
