@@ -167,11 +167,20 @@ class Trajectory:
 
         self.plot_on_bokeh(start_pos, end_pos, bboxs_start, bboxs_end)
 
-    def trajectories_dbscan(self):
+    def trajectories_dbscan(self, dist_type):
         def centroids(paths):
-            # distances = euclidean_distances(paths)
-            # distances = cdist(paths, paths, 'euclidean')
-            distances = self.custom_dist(paths)
+            def euclidean_dist():
+                return euclidean_distances(paths)
+            def cosine_dist():
+                return cosine_distances(paths)
+            def custom_dist():
+                return self.custom_dist(paths)
+            distance_calc = {
+                "euclidean": euclidean_dist,
+                "cosine": cosine_dist,
+                "custom": custom_dist
+            }
+            distances = distance_calc.get(dist_type)()
             db = DBSCAN(metric='precomputed', min_samples=5).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
@@ -304,8 +313,8 @@ class Trajectory:
 
 if __name__ == '__main__':
     trajectory = Trajectory()
-    trajectory.distance_plot()
+    # trajectory.distance_plot()
     # trajectory.neighbors_plot()
-    # trajectory.trajectories_sdbscan()
+    trajectory.trajectories_dbscan("custom")
     # trajectory.trajectories_hdbscan()
     print('done')
