@@ -101,7 +101,7 @@ class Trajectory:
         show(plot)
 
     def points(self):
-        file = "/assets/yellow_tripdata_2015-12.csv"
+        file = "/large/yellow_tripdata_2015-12.csv"
         import csv
 
         start_pos = []
@@ -181,7 +181,7 @@ class Trajectory:
                 "custom": custom_dist
             }
             distances = distance_calc.get(dist_type)()
-            db = DBSCAN(metric='precomputed', min_samples=5).fit(distances)
+            db = DBSCAN(metric='precomputed', eps=0.005, min_samples=60).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
@@ -197,11 +197,11 @@ class Trajectory:
         gc = self.createGeometry(clusters)
         self.createJsonFile(gc)
 
-    def trajectories_hdbscan(self):
+    def trajectories_hdbscan(self, min_cluster_size):
         def centroids(paths):
             # distances = euclidean_distances(paths)
             # distances = cdist(paths, paths, 'euclidean')
-            clusterer = hdbscan.HDBSCAN(min_cluster_size=2)
+            clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
             cluster_labels = clusterer.fit_predict(paths)
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
@@ -245,7 +245,7 @@ class Trajectory:
         m_distances = ma.masked_where(distances == 0, distances)
         min_distances = m_distances.min(0)
         min_distances[::-1].sort()
-        self.plot_on_bokeh_hist('closest_neighbor.html', 'Distance', 'Path', 'Closest Neighbor Distances', min_distances, [])
+        self.plot_on_bokeh_hist('closest_neighbor.html', 'Trajectories -->', 'Custom Distance (~ degrees)', 'Closest Neighbor', min_distances, [])
 
     def plot_on_bokeh_hist(self, filename, x_label, y_label, title, hist, edges):
         from bokeh.layouts import gridplot
@@ -315,6 +315,6 @@ if __name__ == '__main__':
     trajectory = Trajectory()
     # trajectory.distance_plot()
     # trajectory.neighbors_plot()
-    trajectory.trajectories_dbscan("custom")
-    # trajectory.trajectories_hdbscan()
+    trajectory.trajectories_dbscan("euclidean")
+    # trajectory.trajectories_hdbscan(2)
     print('done')

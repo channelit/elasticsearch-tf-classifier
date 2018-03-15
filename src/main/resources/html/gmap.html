@@ -52,7 +52,8 @@
         data_layer.addGeoJson(geojson);
         data_layer.setStyle({
             strokeColor: '#'+Math.floor(Math.random()*16777215).toString(16),
-            strokeWeight: 1
+            strokeWeight: 1,
+            strokeOpacity: 0.80
         });
         // zoom(map);
     }
