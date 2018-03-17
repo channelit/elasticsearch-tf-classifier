@@ -3,7 +3,7 @@ import configparser
 
 def ConfigMap(section):
     config = configparser.ConfigParser()
-    config.read("../resources/_config.ini")
+    config.read("./_config.ini")
     props = {}
     options = config.options(section)
     for option in options:
