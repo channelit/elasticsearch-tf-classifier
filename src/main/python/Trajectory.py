@@ -114,21 +114,24 @@ class Trajectory:
             linectr = 0
             for row in readCSV:
                 if 0 < linectr < MAX_LINES:
-                    if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
-                                                                                                 float(row[9])):
-                        # p_start = Point((float(row[6]),float(row[5])))
-                        # p_end = Point((float(row[10]),float(row[9])))
-                        p_start = [float(row[6]), float(row[5])]
-                        p_end = [float(row[10]), float(row[9])]
-                        path = p_start + p_end
-                        if not p_start in start_pos:
-                            start_pos.append(p_start)
-                        if not p_end in end_pos:
-                            end_pos.append(p_end)
-                        paths.append(path)
+                    if len(row) > 10:
+                        if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
+                                                                                                     float(row[9])):
+                            # p_start = Point((float(row[6]),float(row[5])))
+                            # p_end = Point((float(row[10]),float(row[9])))
+                            p_start = [float(row[6]), float(row[5])]
+                            p_end = [float(row[10]), float(row[9])]
+                            path = p_start + p_end
+                            if not p_start in start_pos:
+                                start_pos.append(p_start)
+                            if not p_end in end_pos:
+                                end_pos.append(p_end)
+                            paths.append(path)
                 if linectr > MAX_LINES:
                     break
                 linectr += 1
+                if linectr % 100 == 0:
+                    print("processed " + linectr)
         return start_pos, end_pos, paths
 
     def is_wihin_range(self, lat, lon):
