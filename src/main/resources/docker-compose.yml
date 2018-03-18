@@ -9,6 +9,7 @@ services:
       - ./data/tensorflow:/data
       - ./data/glove:/glove
       - ./data/assets:/assets
+      - ./conf:/conf
       - ./large:/large
     ports:
       - 6006:6006
