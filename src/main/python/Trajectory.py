@@ -32,6 +32,8 @@ bottom = 24.7433195  # south lat
 
 class Trajectory:
     def __init__(self):
+        if not os.path.exists('/data/logs'):
+            os.makedirs('/data/logs')
         self.json_filepath = os.path.join('/data/logs', 'features.json')
         print("start")
 
