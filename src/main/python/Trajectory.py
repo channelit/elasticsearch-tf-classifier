@@ -183,8 +183,11 @@ class Trajectory:
                 "cosine": cosine_dist,
                 "custom": custom_dist
             }
-            distances = distance_calc.get(dist_type)()
-            db = DBSCAN(metric='precomputed', eps=0.005, min_samples=60).fit(distances)
+            if dist_type=="default":
+                db = DBSCAN(metric='euclidean', eps=0.005, min_samples=60).fit(paths)
+            else:
+                distances = distance_calc.get(dist_type)()
+                db = DBSCAN(metric='precomputed', eps=0.005, min_samples=60).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
@@ -318,6 +321,6 @@ if __name__ == '__main__':
     trajectory = Trajectory()
     # trajectory.distance_plot()
     # trajectory.neighbors_plot()
-    trajectory.trajectories_dbscan("euclidean")
+    trajectory.trajectories_dbscan("default")
     # trajectory.trajectories_hdbscan(2)
     print('done')
