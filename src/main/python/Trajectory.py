@@ -131,7 +131,7 @@ class Trajectory:
                     break
                 linectr += 1
                 if linectr % 100 == 0:
-                    print("processed " + linectr)
+                    print("processed {}".format(linectr))
         return start_pos, end_pos, paths
 
     def is_wihin_range(self, lat, lon):
