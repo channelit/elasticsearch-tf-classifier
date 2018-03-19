@@ -58,7 +58,7 @@
         data_layer.setStyle(function(feature) {
             var size=1;
             if (feature.getProperty("size")) {
-                size = feature.getProperty("size")
+                size = feature.getProperty("size") * 1.5
             } else if (feature.getProperty("radius")) {
                 size=feature.getProperty("radius") * 10000
             }
