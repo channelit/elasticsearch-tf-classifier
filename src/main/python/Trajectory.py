@@ -229,15 +229,28 @@ class Trajectory:
         self.createJsonFile(gc)
 
     def createGeometry(self, clusters):
-        from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection
+        from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection, Polygon
         from shapely.geometry import MultiPoint
-        raw = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in clusters]
+        total_clusters = len(clusters)
+        raw = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])]), properties={"index":i, "total_clusters":total_clusters}) for line in cluster]) for i, cluster in enumerate(clusters)]
+        # def bbox(bounds):
+        #     # l=0, b=1, r=2 t=3 (l,t), (l,b), (r, b), (r, t) (0,3), (0,1), (2,1), (2,3)
+        #     return Polygon([[(bounds[0],bounds[3]),(bounds[0],bounds[1]),(bounds[2],bounds[1]),(bounds[2],bounds[3]),(bounds[0],bounds[3])]])
+        def blen(bounds):
+            # l=0, b=1, r=2 t=3 (l,t), (l,b), (r, b), (r, t) (0,3), (0,1), (2,1), (2,3)
+            return max(abs(bounds[0]-bounds[2]), abs(bounds[1]-bounds[3]))
         clustered = []
-        for cluster in clusters:
+        for i, cluster in enumerate(clusters):
             starts = MultiPoint([[line[1], line[0]] for line in cluster])
             ends = MultiPoint([[line[3], line[2]] for line in cluster])
-            feature = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"size":len(starts)})
-            clustered.append(FeatureCollection([feature]))
+            feature = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"size":len(starts), "index":i, "total_clusters":total_clusters})
+            start_bounds = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (starts.centroid.coords[:][0])]), properties={"radius":blen(starts.bounds), "index":i, "total_clusters":total_clusters})
+            end_bounds = Feature(geometry=LineString([(ends.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"radius":blen(ends.bounds), "index":i, "total_clusters":total_clusters})
+            # start_bounds = Feature(geometry=bbox(starts.bounds), properties={"size":len(starts)})
+            # end_bounds = Feature(geometry=bbox(ends.bounds), properties={"size":len(starts)})
+            # clustered.append(FeatureCollection([feature, start_bounds, end_bounds]))
+            # clustered.append(FeatureCollection([feature, start_bounds, end_bounds]))
+            clustered.append(FeatureCollection([feature, start_bounds, end_bounds]))
         return raw, clustered
 
     def createJsonFile(self, array_of_featurecollection, prefix):

@@ -46,14 +46,24 @@
         });
     }
 
+    function selectColor(colorNum, colors){
+        if (colors < 1) colors = 1; // defaults to one color - avoid divide by zero
+        return "hsl(" + (colorNum * (360 / colors) % 360) + ",100%,50%)";
+    }
+
     function loadGeoJsonString(geoString) {
         var geojson = JSON.parse(geoString);
         var data_layer = new google.maps.Data({map: map});
         data_layer.addGeoJson(geojson);
         data_layer.setStyle(function(feature) {
-            var size = feature.getProperty("size") ? feature.getProperty("size") : 1;
+            var size=1;
+            if (feature.getProperty("size")) {
+                size = feature.getProperty("size")
+            } else if (feature.getProperty("radius")) {
+                size=feature.getProperty("radius") * 10000
+            }
             return {
-                strokeColor: '#' + Math.floor(Math.random() * 16777215).toString(16),
+                strokeColor: selectColor(feature.getProperty("index"), feature.getProperty("total_clusters")),
                 strokeWeight: size,
                 strokeOpacity: 0.80
             };
