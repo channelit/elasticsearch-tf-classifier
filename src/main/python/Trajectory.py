@@ -246,8 +246,8 @@ class Trajectory:
             feature = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"size":len(starts), "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (starts.centroid.coords[:][0])]), properties={"radius":blen(starts.bounds), "index":i, "total_clusters":total_clusters})
             # end_bounds = Feature(geometry=LineString([(ends.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"radius":blen(ends.bounds), "index":i, "total_clusters":total_clusters})
-            start_bounds = Feature(geometry=bbox(starts.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters})
-            end_bounds = Feature(geometry=bbox(ends.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters})
+            start_bounds = Feature(geometry=bbox(starts.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters, "location":"start"})
+            end_bounds = Feature(geometry=bbox(ends.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters, "location":"end"})
             clustered.append(FeatureCollection([feature, start_bounds, end_bounds]))
         return raw, clustered
 
