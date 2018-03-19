@@ -19,9 +19,11 @@ from scipy.spatial.distance import cdist
 from scipy.spatial import distance
 
 training = ConfigMap("Training")
+eps = float(training['eps'])
+grpsize = int(training['grpsize'])
+MAX_LINES = int(training['size'])
 secret = ConfigMap("Secrets")
 matric='euclidean'
-MAX_LINES = int(training['size'])
 NUM_GROUPS = 70
 API_KEY = secret['google_maps_api_key']
 top = 49.3457868  # north lat
@@ -32,9 +34,9 @@ bottom = 24.7433195  # south lat
 
 class Trajectory:
     def __init__(self):
-        if not os.path.exists('/data/logs'):
-            os.makedirs('/data/logs')
-        self.json_filepath = os.path.join('/data/logs', 'features.json')
+        self.json_folder = "/data/logs"
+        if not os.path.exists(self.json_folder):
+            os.makedirs(self.json_folder)
         print("start")
 
     def get_tree(self, pts):
@@ -186,10 +188,10 @@ class Trajectory:
                 "custom": custom_dist
             }
             if dist_type=="default":
-                db = DBSCAN(metric='euclidean', eps=0.005, min_samples=60).fit(paths)
+                db = DBSCAN(metric='euclidean', eps=eps, min_samples=grpsize).fit(paths)
             else:
                 distances = distance_calc.get(dist_type)()
-                db = DBSCAN(metric='precomputed', eps=0.005, min_samples=60).fit(distances)
+                db = DBSCAN(metric='precomputed', eps=eps, min_samples=grpsize).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
@@ -202,8 +204,9 @@ class Trajectory:
 
         start_pos, end_pos, paths = self.points()
         clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
-        gc = self.createGeometry(clusters)
-        self.createJsonFile(gc)
+        raw, clustered = self.createGeometry(clusters)
+        self.createJsonFile(raw, "raw_")
+        self.createJsonFile(clustered, "c_")
 
     def trajectories_hdbscan(self, min_cluster_size):
         def centroids(paths):
@@ -227,15 +230,21 @@ class Trajectory:
 
     def createGeometry(self, clusters):
         from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection
-        geometries = [FeatureCollection(
-            [Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in
-                      clusters]
-        return geometries
+        from shapely.geometry import MultiPoint
+        raw = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])])) for line in cluster]) for cluster in clusters]
+        clustered = []
+        for cluster in clusters:
+            starts = MultiPoint([[line[1], line[0]] for line in cluster])
+            ends = MultiPoint([[line[3], line[2]] for line in cluster])
+            feature = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"size":len(starts)})
+            clustered.append(FeatureCollection([feature]))
+        return raw, clustered
 
-    def createJsonFile(self, gc):
+    def createJsonFile(self, array_of_featurecollection, prefix):
         import geojson
-        for i, g in enumerate(gc):
-            f = open(self.json_filepath.replace('.json', '_' + str(i) + '.json'), 'w')
+        json_filepath = os.path.join(self.json_folder, prefix + 'features.json')
+        for i, g in enumerate(array_of_featurecollection):
+            f = open(json_filepath.replace('.json', '_' + str(i) + '.json'), 'w')
             f.write(geojson.dumps(g, sort_keys=True))
             f.close()
         pass

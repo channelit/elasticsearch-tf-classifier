@@ -50,10 +50,13 @@
         var geojson = JSON.parse(geoString);
         var data_layer = new google.maps.Data({map: map});
         data_layer.addGeoJson(geojson);
-        data_layer.setStyle({
-            strokeColor: '#'+Math.floor(Math.random()*16777215).toString(16),
-            strokeWeight: 1,
-            strokeOpacity: 0.80
+        data_layer.setStyle(function(feature) {
+            var size = feature.getProperty("size") ? feature.getProperty("size") : 1;
+            return {
+                strokeColor: '#' + Math.floor(Math.random() * 16777215).toString(16),
+                strokeWeight: size,
+                strokeOpacity: 0.80
+            };
         });
         // zoom(map);
     }
