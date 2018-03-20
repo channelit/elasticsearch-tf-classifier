@@ -104,6 +104,19 @@ class Trajectory:
         output_file("/assets/gmap_plot.html")
         show(plot)
 
+    def dist(self, lat1, lon1, lat2, lon2):
+        from math import sin, cos, sqrt, atan2, radians
+        R = 6378.1
+        lat1 = radians(lat1)
+        lon1 = radians(lon1)
+        lat2 = radians(lat2)
+        lon2 = radians(lon2)
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = (sin(dlat/2))**2 + cos(lat1) * cos(lat2) * (sin(dlon/2))**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        return R * c
+
     def points(self):
         file = "/large/yellow_tripdata_2015-12.csv"
         import csv
@@ -194,7 +207,7 @@ class Trajectory:
                 db = DBSCAN(metric='precomputed', eps=eps, min_samples=grpsize).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-            unique_labels = set(cluster_labels)
+            # unique_labels = set(cluster_labels)
             clusters = [[] for n in range(num_clusters)]
             print('Number of clusters: {}'.format(num_clusters))
             for i, v in enumerate(paths):
@@ -231,23 +244,36 @@ class Trajectory:
     def createGeometry(self, clusters):
         from geojson import FeatureCollection, Point, LineString, Feature, GeometryCollection, Polygon
         from shapely.geometry import MultiPoint
+        from shapely.geometry import LineString as ShapelyLineString
         total_clusters = len(clusters)
         raw = [FeatureCollection([Feature(geometry=LineString([(line[1], line[0]), (line[3], line[2])]), properties={"index":i, "total_clusters":total_clusters}) for line in cluster]) for i, cluster in enumerate(clusters)]
+
         def bbox(bounds):
             # l=0, b=1, r=2 t=3 (l,t), (l,b), (r, b), (r, t) (0,3), (0,1), (2,1), (2,3)
             return Polygon([[(bounds[0],bounds[3]),(bounds[0],bounds[1]),(bounds[2],bounds[1]),(bounds[2],bounds[3]),(bounds[0],bounds[3])]])
+
+        def circle(bounds, centroid):
+            # l=0, b=1, r=2 t=3 (l,t), (l,b), (r, b), (r, t) (0,3), (0,1), (2,1), (2,3)
+            r = self.dist(bounds[0], bounds[3], bounds[2], bounds[1])/2
+            return Polygon(self.generate_circle(centroid.coords[:][0][0], centroid.coords[:][0][1], r))
+
         def blen(bounds):
             # l=0, b=1, r=2 t=3 (l,t), (l,b), (r, b), (r, t) (0,3), (0,1), (2,1), (2,3)
             return max(abs(bounds[0]-bounds[2]), abs(bounds[1]-bounds[3]))
+
+
         clustered = []
         for i, cluster in enumerate(clusters):
             starts = MultiPoint([[line[1], line[0]] for line in cluster])
             ends = MultiPoint([[line[3], line[2]] for line in cluster])
-            feature = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"size":len(starts), "index":i, "total_clusters":total_clusters})
+            feature = Feature(geometry=ShapelyLineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]).buffer(len(starts)/10000), properties={"size":2, "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (starts.centroid.coords[:][0])]), properties={"radius":blen(starts.bounds), "index":i, "total_clusters":total_clusters})
             # end_bounds = Feature(geometry=LineString([(ends.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"radius":blen(ends.bounds), "index":i, "total_clusters":total_clusters})
-            start_bounds = Feature(geometry=bbox(starts.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters, "location":"start"})
-            end_bounds = Feature(geometry=bbox(ends.bounds), properties={"size":5, "index":i, "total_clusters":total_clusters, "location":"end"})
+            # start_bounds = Feature(geometry=circle(starts.bounds, starts.centroid), properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"start"})
+            # end_bounds = Feature(geometry=circle(ends.bounds, ends.centroid), properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"end"})
+            start_bounds = Feature(geometry=starts.convex_hull, properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"start"})
+            end_bounds = Feature(geometry=ends.convex_hull, properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"end"})
+
             clustered.append(FeatureCollection([feature, start_bounds, end_bounds]))
         return raw, clustered
 
@@ -259,6 +285,7 @@ class Trajectory:
             f.write(geojson.dumps(g, sort_keys=True))
             f.close()
         pass
+
 
     def distance_plot(self):
         from numpy import histogram
@@ -338,6 +365,23 @@ class Trajectory:
         # distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
         return distances
 
+    def generate_circle(self, lat, lon, radius):
+        import math
+
+        def get_coord(lat,lon,radius,bearing):
+            R = 6378.1 #Radius of the Earth
+            brng = math.radians(bearing)
+            d = radius
+            lat1 = math.radians(lat) #Current lat point converted to radians
+            lon1 = math.radians(lon) #Current long point converted to radians
+            lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +
+                              math.cos(lat1)*math.sin(d/R)*math.cos(brng))
+            lon2 = lon1 + math.atan2(math.sin(brng)*math.sin(d/R)*math.cos(lat1),
+                                     math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
+            lat2 = math.degrees(lat2)
+            lon2 = math.degrees(lon2)
+            return [lat2,lon2]
+        return [[get_coord(lat,lon,radius,d) for d in range(0,365,5)]]
 
 if __name__ == '__main__':
     trajectory = Trajectory()
