@@ -1,5 +1,6 @@
 import configparser
 import logging
+import logging.config
 
 def ConfigMap(section):
     config = configparser.ConfigParser()
@@ -11,15 +12,7 @@ def ConfigMap(section):
     return props
 
 def Logging(app):
+    logging.config.fileConfig('/conf/_logging.ini')
     logger = logging.getLogger(app)
     logger.setLevel(logging.INFO)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    ch.setFormatter(formatter)
-
-    logger.addHandler(ch)
     return logger
