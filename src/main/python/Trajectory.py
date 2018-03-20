@@ -266,7 +266,7 @@ class Trajectory:
         for i, cluster in enumerate(clusters):
             starts = MultiPoint([[line[1], line[0]] for line in cluster])
             ends = MultiPoint([[line[3], line[2]] for line in cluster])
-            feature = Feature(geometry=ShapelyLineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]).buffer(len(starts)/10000), properties={"size":2, "index":i, "total_clusters":total_clusters})
+            feature = Feature(geometry=ShapelyLineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]).buffer(len(starts)/MAX_LINES), properties={"size":2, "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (starts.centroid.coords[:][0])]), properties={"radius":blen(starts.bounds), "index":i, "total_clusters":total_clusters})
             # end_bounds = Feature(geometry=LineString([(ends.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"radius":blen(ends.bounds), "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=circle(starts.bounds, starts.centroid), properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"start"})
@@ -384,6 +384,7 @@ class Trajectory:
         return [[get_coord(lat,lon,radius,d) for d in range(0,365,5)]]
 
 if __name__ == '__main__':
+    print ('Using eps={}, grpsize={}, MAX_LINES={}'.format(eps, grpsize, MAX_LINES))
     trajectory = Trajectory()
     # trajectory.distance_plot()
     # trajectory.neighbors_plot()
