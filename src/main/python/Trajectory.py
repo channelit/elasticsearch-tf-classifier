@@ -3,7 +3,7 @@ from pysal.cg.shapes import Chain
 import scipy
 import pysal
 import os
-from _config import ConfigMap
+from _config import ConfigMap, Logging
 import numpy as np
 import numpy.ma as ma
 from sklearn.cluster import DBSCAN
@@ -30,14 +30,14 @@ top = 49.3457868  # north lat
 left = -124.7844079  # west long
 right = -66.9513812  # east long
 bottom = 24.7433195  # south lat
-
+logging = Logging("Trajectory")
 
 class Trajectory:
     def __init__(self):
         self.json_folder = "/data/logs"
         if not os.path.exists(self.json_folder):
             os.makedirs(self.json_folder)
-        print("start")
+        logging.info("start")
 
     def get_tree(self, pts):
         tree = pysal.cg.kdtree.KDTree(pts, leafsize=10, distance_metric='Euclidean', radius=6371.0)
@@ -148,7 +148,7 @@ class Trajectory:
                     break
                 linectr += 1
                 if linectr % 100 == 0:
-                    print("processed {}".format(linectr))
+                    logging.info("processed %s", linectr)
         return start_pos, end_pos, paths
 
     def is_wihin_range(self, lat, lon):
@@ -209,7 +209,7 @@ class Trajectory:
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             # unique_labels = set(cluster_labels)
             clusters = [[] for n in range(num_clusters)]
-            print('Number of clusters: {}'.format(num_clusters))
+            logging.info('Number of clusters: %s', num_clusters)
             for i, v in enumerate(paths):
                 if cluster_labels[i] != -1:
                     clusters[cluster_labels[i]].append(v)
@@ -230,7 +230,7 @@ class Trajectory:
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             unique_labels = set(cluster_labels)
             clusters = [[] for n in range(num_clusters)]
-            print('Number of clusters: {}'.format(num_clusters))
+            logging.info('Number of clusters: %s', num_clusters)
             for i, v in enumerate(paths):
                 if cluster_labels[i] != -1:
                     clusters[cluster_labels[i]].append(v)
@@ -359,7 +359,7 @@ class Trajectory:
             min_delta = min_dist(u,v)
             if min_delta > 0:
                 return distance.euclidean(u,v)/min_dist(u,v)
-            print('delta is zero')
+            logging.info('delta is zero')
             return 0
         distances = cdist(paths, paths, f)
         # distances = cdist(paths, paths, lambda u, v: np.sqrt(((u-v)**2).sum())/min_dist(u,v))
@@ -384,10 +384,11 @@ class Trajectory:
         return [[get_coord(lat,lon,radius,d) for d in range(0,365,5)]]
 
 if __name__ == '__main__':
-    print ('Using eps={}, grpsize={}, MAX_LINES={}'.format(eps, grpsize, MAX_LINES))
+
+    logging.info('Using eps=%s, grpsize=%s, MAX_LINES=%s', eps, grpsize, MAX_LINES)
     trajectory = Trajectory()
     # trajectory.distance_plot()
     # trajectory.neighbors_plot()
     trajectory.trajectories_dbscan("default")
     # trajectory.trajectories_hdbscan(2)
-    print('done')
+    logging.info('done')
