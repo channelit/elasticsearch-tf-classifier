@@ -64,8 +64,10 @@
             }
             return {
                 strokeColor: selectColor(feature.getProperty("index"), feature.getProperty("total_clusters")),
-                strokeWeight: size,
-                strokeOpacity: 0.80
+                strokeWeight: 2,
+                strokeOpacity: 0.80,
+                fillColor: selectColor(feature.getProperty("index"), feature.getProperty("total_clusters")),
+                fillOpacity: 0.65
             };
         });
         // zoom(map);
