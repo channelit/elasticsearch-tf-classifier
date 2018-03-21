@@ -5,6 +5,7 @@ services:
     container_name: python
     environment:
       - PASSWORD=password
+      - DOCKER_API_VERSION=1.35
     volumes:
       - ./data/tensorflow:/data
       - ./data/glove:/glove
@@ -25,6 +26,8 @@ services:
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - ELASTIC_PASSWORD=password
+      - DOCKER_API_VERSION=1.35
+
     ulimits:
       memlock:
         soft: -1
@@ -49,6 +52,8 @@ services:
       - 5601:5601
     networks:
       - elastic
+    environment:
+      - DOCKER_API_VERSION=1.35
 
 networks:
   elastic:
