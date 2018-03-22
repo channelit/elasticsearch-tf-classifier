@@ -31,6 +31,8 @@ left = -124.7844079  # west long
 right = -66.9513812  # east long
 bottom = 24.7433195  # south lat
 logging = Logging("trajectory")
+system = ConfigMap("System")
+cores = int(system['cores'])
 
 class Trajectory:
     def __init__(self):
@@ -201,10 +203,10 @@ class Trajectory:
                 "custom": custom_dist
             }
             if dist_type=="default":
-                db = DBSCAN(metric='euclidean', eps=eps, min_samples=grpsize).fit(paths)
+                db = DBSCAN(metric='euclidean', eps=eps, min_samples=grpsize, n_jobs=cores).fit(paths)
             else:
                 distances = distance_calc.get(dist_type)()
-                db = DBSCAN(metric='precomputed', eps=eps, min_samples=grpsize).fit(distances)
+                db = DBSCAN(metric='precomputed', eps=eps, min_samples=grpsize, n_jobs=cores).fit(distances)
             cluster_labels = db.labels_
             num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
             # unique_labels = set(cluster_labels)
