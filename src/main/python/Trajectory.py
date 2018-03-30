@@ -17,6 +17,9 @@ from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.spatial.distance import cdist
 from scipy.spatial import distance
+import csv
+import itertools
+import multiprocessing as mp
 
 training = ConfigMap("Training")
 eps = float(training['eps'])
@@ -118,6 +121,44 @@ class Trajectory:
         a = (sin(dlat/2))**2 + cos(lat1) * cos(lat2) * (sin(dlon/2))**2
         c = 2 * atan2(sqrt(a), sqrt(1-a))
         return R * c
+
+    def points_mp(self):
+        file = "/large/yellow_tripdata_2015-12.csv"
+        def worker(chunk):
+            # `chunk` will be a list of CSV rows all with the same name column
+            # replace this with your real computation
+            # print(chunk)
+            return len(chunk)
+
+        start_pos = []
+        end_pos = []
+        paths = []
+
+        with open(file) as csvfile:
+            readCSV = csv.reader(csvfile, delimiter=',')
+
+            linectr = 0
+            for row in readCSV:
+                if 0 < linectr < MAX_LINES:
+                    if len(row) > 10:
+                        if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
+                                                                                                     float(row[9])):
+                            # p_start = Point((float(row[6]),float(row[5])))
+                            # p_end = Point((float(row[10]),float(row[9])))
+                            p_start = [float(row[6]), float(row[5])]
+                            p_end = [float(row[10]), float(row[9])]
+                            path = p_start + p_end
+                            if not p_start in start_pos:
+                                start_pos.append(p_start)
+                            if not p_end in end_pos:
+                                end_pos.append(p_end)
+                            paths.append(path)
+                if linectr > MAX_LINES:
+                    break
+                linectr += 1
+                if linectr % 100 == 0:
+                    logging.info("processed %s", linectr)
+        return start_pos, end_pos, paths
 
     def points(self):
         file = "/large/yellow_tripdata_2015-12.csv"
