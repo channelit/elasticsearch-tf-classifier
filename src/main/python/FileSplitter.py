@@ -11,7 +11,7 @@ logging = Logging("trajectory")
 system = ConfigMap("System")
 cores = int(system['cores'])
 date_time_field = 3
-base_folder = "../resources/large/"
+base_folder = "/large/"
 file_to_split = os.path.join(base_folder, "yellow_tripdata_2015-12.csv")
 
 
