@@ -42,9 +42,6 @@ cores = int(system['cores'])
 
 class Trajectory:
     def __init__(self):
-        self.json_folder = "/data/logs"
-        if not os.path.exists(self.json_folder):
-            os.makedirs(self.json_folder)
         logging.info("start")
 
     def get_tree(self, pts):
@@ -329,7 +326,7 @@ class Trajectory:
 
     def createJsonFile(self, array_of_featurecollection, prefix):
         import geojson
-        json_filepath = os.path.join(self.json_folder, prefix + 'features.json')
+        json_filepath = os.path.join(sourcedir, prefix + 'features.json')
         for i, g in enumerate(array_of_featurecollection):
             f = open(json_filepath.replace('.json', '_' + str(i) + '.json'), 'w')
             f.write(geojson.dumps(g, sort_keys=True))
