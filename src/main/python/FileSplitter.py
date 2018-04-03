@@ -108,7 +108,7 @@ class FileSplitter:
 
 if __name__ == "__main__":
     filesplitter = FileSplitter()
-    # filesplitter.process_file()
+    filesplitter.process_file()
     filesplitter.arrange_files()
 
 
