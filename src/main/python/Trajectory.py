@@ -25,6 +25,9 @@ training = ConfigMap("Training")
 eps = float(training['eps'])
 grpsize = int(training['grpsize'])
 MAX_LINES = int(training['size'])
+sourcedir = training['sourcedir']
+sourceregex = training['sourceregex']
+
 secret = ConfigMap("Secrets")
 matric='euclidean'
 NUM_GROUPS = 70
@@ -161,37 +164,41 @@ class Trajectory:
         return start_pos, end_pos, paths
 
     def points(self):
-        file = "/large/yellow_tripdata_2015-12.csv"
-        import csv
 
+        import csv
+        import re
+
+        p = re.compile(sourceregex)
         start_pos = []
         end_pos = []
         paths = []
 
-        with open(file) as csvfile:
-            readCSV = csv.reader(csvfile, delimiter=',')
-
-            linectr = 0
-            for row in readCSV:
-                if 0 < linectr < MAX_LINES:
-                    if len(row) > 10:
-                        if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
-                                                                                                     float(row[9])):
-                            # p_start = Point((float(row[6]),float(row[5])))
-                            # p_end = Point((float(row[10]),float(row[9])))
-                            p_start = [float(row[6]), float(row[5])]
-                            p_end = [float(row[10]), float(row[9])]
-                            path = p_start + p_end
-                            if not p_start in start_pos:
-                                start_pos.append(p_start)
-                            if not p_end in end_pos:
-                                end_pos.append(p_end)
-                            paths.append(path)
-                if linectr > MAX_LINES:
-                    break
-                linectr += 1
-                if linectr % 100 == 0:
-                    logging.info("processed %s", linectr)
+        for root, dirs, files in os.walk(sourcedir):
+            selected_files = [f for f in files if p.match(f)]
+            for file in selected_files:
+                with open(os.path.join(root, file)) as csvfile:
+                    readCSV = csv.reader(csvfile, delimiter=',')
+                    linectr = 0
+                    for row in readCSV:
+                        if 0 < linectr < MAX_LINES:
+                            if len(row) > 10:
+                                if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
+                                                                                                             float(row[9])):
+                                    # p_start = Point((float(row[6]),float(row[5])))
+                                    # p_end = Point((float(row[10]),float(row[9])))
+                                    p_start = [float(row[6]), float(row[5])]
+                                    p_end = [float(row[10]), float(row[9])]
+                                    path = p_start + p_end
+                                    if not p_start in start_pos:
+                                        start_pos.append(p_start)
+                                    if not p_end in end_pos:
+                                        end_pos.append(p_end)
+                                    paths.append(path)
+                        if linectr > MAX_LINES:
+                            break
+                        linectr += 1
+                        if linectr % 100 == 0:
+                            logging.info("processed %s", linectr)
         return start_pos, end_pos, paths
 
     def is_wihin_range(self, lat, lon):

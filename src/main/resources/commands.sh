@@ -6,4 +6,6 @@ bash <(curl -s https://raw.githubusercontent.com/channelit/launch-scripts/master
 docker cp ../python python:/src
 docker exec python rm -rf /src
 docker exec python nohup python /src/Trajectory.py &
-scp -i "cit.pem" -r ubuntu@ec2-52-90-4-23.compute-1.amazonaws.com:/home/ubuntu/elasticsearch-tf-classifier/src/main/resources/data/tensorflow .
+# get counts in each file
+# wc -l * | xargs -n2 >> counts.csv
+scp -i "cit.pem" -r ubuntu@ec2-54-226-174-5.compute-1.amazonaws.com:/home/ubuntu/elasticsearch-tf-classifier/src/main/resources/large .

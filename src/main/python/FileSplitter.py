@@ -5,6 +5,7 @@ from multiprocessing import Process, Lock, Queue, current_process, Pool
 import sys
 from _config import ConfigMap, Logging
 import os
+from shutil import copyfile
 
 
 logging = Logging("trajectory")
@@ -33,6 +34,36 @@ class FileSplitter:
                 if linectr > 1 :
                     yield line
 
+    def arrange_files(self):
+        folder = "/large/"
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                if file.find("_") >= 0:
+                    _hour = "hr_" + file[1:self.find_nth(file,'_',3)]
+                    _day = "day_" + file[self.find_nth(file,'_',3)+1:]
+                    # copy to hour folder
+                    _dir = os.path.join(folder,_hour)
+                    if not os.path.exists(_dir):
+                        os.makedirs(_dir)
+                        _dir = os.path.join(folder,_hour)
+                    nfile = os.path.join(_dir, file)
+                    copyfile(folder + file, nfile)
+                    # copy to day folder
+                    _dir = os.path.join(folder,_day)
+                    if not os.path.exists(_dir):
+                        os.makedirs(_dir)
+                    nfile = os.path.join(_dir, file)
+                    copyfile(folder + file, nfile)
+                    continue
+
+    def find_nth(self, s, f, n):
+        i = 0
+        while n >= 0:
+            n -= 1
+            i = s.find(f, i + 1)
+        return i
+        
+
     def process_file(self):
         f = self.get_next_line()
 
@@ -42,7 +73,6 @@ class FileSplitter:
             t.map(self.process_line, (i,))
         t.join()
         t.close()
-
 
     # def do_work(self, in_queue, out_queue):
     #     while True:
@@ -78,8 +108,8 @@ class FileSplitter:
 
 if __name__ == "__main__":
     filesplitter = FileSplitter()
-    filesplitter.process_file()
-
+    # filesplitter.process_file()
+    filesplitter.arrange_files()
 
 
 
