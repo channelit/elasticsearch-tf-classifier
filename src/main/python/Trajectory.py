@@ -184,7 +184,7 @@ class Trajectory:
                     clusters[cluster_labels[i]].append(v)
             return clusters
 
-        start_pos, end_pos, paths = filesplitter.points_old()
+        start_pos, end_pos, paths = filesplitter.points()
         clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
         raw, clustered = self.createGeometry(clusters)
         self.createJsonFile(raw, "raw_")

@@ -5,7 +5,10 @@ from multiprocessing import Process, Lock, Queue, current_process, Pool
 import sys
 from _config import ConfigMap, Logging
 import os
+import re
+import csv
 from shutil import copyfile
+from functools import partial
 
 
 logging = Logging("trajectory")
@@ -175,6 +178,7 @@ class FileSplitter:
         return bottom <= lat <= top and left <= lon <= right
 
     def process_line_for_points(self, row):
+        # row, start_pos, end_pos, paths = args
         if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),float(row[9])):
             # p_start = Point((float(row[6]),float(row[5])))
             # p_end = Point((float(row[10]),float(row[9])))
@@ -184,23 +188,19 @@ class FileSplitter:
             return p_start, p_end, path
 
     def points(self):
+        f = self.get_next_line_until_max()
+        p = Pool(processes=cores)
+        results = p.map(self.process_line_for_points, [i for i in f])
+        p.close()
+        p.join()
         start_pos = []
         end_pos = []
         paths = []
-
-        f = self.get_next_line()
-        t = Pool(processes=cores)
-        for i in f:
-            p_start, p_end, path = t.starmap(self.process_line, (i,))
-            if not p_start in start_pos:
-                start_pos.append(p_start)
-            if not p_end in end_pos:
-                end_pos.append(p_end)
-            paths.append(path)
-
-        t.join()
-        t.close()
-
+        for result in results:
+            if result is not None:
+                start_pos.append(result[0])
+                end_pos.append(result[1])
+                paths.append(result[2])
         return start_pos, end_pos, paths
 
 if __name__ == "__main__":
