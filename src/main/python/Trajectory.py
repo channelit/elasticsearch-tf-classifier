@@ -4,6 +4,7 @@ import scipy
 import pysal
 import os
 from _config import ConfigMap, Logging
+from FileSplitter import FileSplitter
 import numpy as np
 import numpy.ma as ma
 from sklearn.cluster import DBSCAN
@@ -17,9 +18,11 @@ from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.spatial.distance import cdist
 from scipy.spatial import distance
+from math import log
 import csv
-import itertools
-import multiprocessing as mp
+from multiprocessing import Process, Lock, Queue, current_process, Pool
+import csv
+import re
 
 training = ConfigMap("Training")
 eps = float(training['eps'])
@@ -32,13 +35,11 @@ secret = ConfigMap("Secrets")
 matric='euclidean'
 NUM_GROUPS = 70
 API_KEY = secret['google_maps_api_key']
-top = 49.3457868  # north lat
-left = -124.7844079  # west long
-right = -66.9513812  # east long
-bottom = 24.7433195  # south lat
 logging = Logging("trajectory")
 system = ConfigMap("System")
 cores = int(system['cores'])
+
+filesplitter = FileSplitter()
 
 class Trajectory:
     def __init__(self):
@@ -122,87 +123,8 @@ class Trajectory:
         c = 2 * atan2(sqrt(a), sqrt(1-a))
         return R * c
 
-    def points_mp(self):
-        file = "/large/yellow_tripdata_2015-12.csv"
-        def worker(chunk):
-            # `chunk` will be a list of CSV rows all with the same name column
-            # replace this with your real computation
-            # print(chunk)
-            return len(chunk)
-
-        start_pos = []
-        end_pos = []
-        paths = []
-
-        with open(file) as csvfile:
-            readCSV = csv.reader(csvfile, delimiter=',')
-
-            linectr = 0
-            for row in readCSV:
-                if 0 < linectr < MAX_LINES:
-                    if len(row) > 10:
-                        if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
-                                                                                                     float(row[9])):
-                            # p_start = Point((float(row[6]),float(row[5])))
-                            # p_end = Point((float(row[10]),float(row[9])))
-                            p_start = [float(row[6]), float(row[5])]
-                            p_end = [float(row[10]), float(row[9])]
-                            path = p_start + p_end
-                            if not p_start in start_pos:
-                                start_pos.append(p_start)
-                            if not p_end in end_pos:
-                                end_pos.append(p_end)
-                            paths.append(path)
-                if linectr > MAX_LINES:
-                    break
-                linectr += 1
-                if linectr % 100 == 0:
-                    logging.info("processed %s", linectr)
-        return start_pos, end_pos, paths
-
-    def points(self):
-
-        import csv
-        import re
-
-        p = re.compile(sourceregex)
-        start_pos = []
-        end_pos = []
-        paths = []
-
-        for root, dirs, files in os.walk(sourcedir):
-            selected_files = [f for f in files if p.match(f)]
-            for file in selected_files:
-                with open(os.path.join(root, file)) as csvfile:
-                    readCSV = csv.reader(csvfile, delimiter=',')
-                    linectr = 0
-                    for row in readCSV:
-                        if 0 < linectr < MAX_LINES:
-                            if len(row) > 10:
-                                if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),
-                                                                                                             float(row[9])):
-                                    # p_start = Point((float(row[6]),float(row[5])))
-                                    # p_end = Point((float(row[10]),float(row[9])))
-                                    p_start = [float(row[6]), float(row[5])]
-                                    p_end = [float(row[10]), float(row[9])]
-                                    path = p_start + p_end
-                                    if not p_start in start_pos:
-                                        start_pos.append(p_start)
-                                    if not p_end in end_pos:
-                                        end_pos.append(p_end)
-                                    paths.append(path)
-                        if linectr > MAX_LINES:
-                            break
-                        linectr += 1
-                        if linectr % 100 == 0:
-                            logging.info("processed %s", linectr)
-        return start_pos, end_pos, paths
-
-    def is_wihin_range(self, lat, lon):
-        return bottom <= lat <= top and left <= lon <= right
-
     def trajectories_knn(self):
-        start_pos, end_pos, paths = self.points()
+        start_pos, end_pos, paths = FileSplitter.points_old()
         knn_start = pysal.weights.KNN(start_pos, k=NUM_GROUPS)
         knn_end = pysal.weights.KNN(end_pos, k=NUM_GROUPS)
 
@@ -262,7 +184,7 @@ class Trajectory:
                     clusters[cluster_labels[i]].append(v)
             return clusters
 
-        start_pos, end_pos, paths = self.points()
+        start_pos, end_pos, paths = filesplitter.points_old()
         clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
         raw, clustered = self.createGeometry(clusters)
         self.createJsonFile(raw, "raw_")
@@ -283,7 +205,7 @@ class Trajectory:
                     clusters[cluster_labels[i]].append(v)
             return clusters
 
-        start_pos, end_pos, paths = self.points()
+        start_pos, end_pos, paths = FileSplitter.points()
         clusters = centroids(paths)  # Array of [start_lat, start_lon, end_lat, end_lon]
         gc = self.createGeometry(clusters)
         self.createJsonFile(gc)
@@ -310,10 +232,13 @@ class Trajectory:
 
 
         clustered = []
+        total_clustured = sum(len(cluster) for cluster in clusters)
         for i, cluster in enumerate(clusters):
             starts = MultiPoint([[line[1], line[0]] for line in cluster])
             ends = MultiPoint([[line[3], line[2]] for line in cluster])
-            feature = Feature(geometry=ShapelyLineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]).buffer(len(starts)/MAX_LINES), properties={"size":2, "index":i, "total_clusters":total_clusters})
+            buffer = len(starts) * 0.01/total_clustured
+            logging.info("starts=%s lines=%s buffer=%s clustered=%s",len(starts),MAX_LINES, buffer, total_clustured)
+            feature = Feature(geometry=ShapelyLineString([(starts.centroid.coords[:][0]), (ends.centroid.coords[:][0])]).buffer(buffer), properties={"size":2, "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=LineString([(starts.centroid.coords[:][0]), (starts.centroid.coords[:][0])]), properties={"radius":blen(starts.bounds), "index":i, "total_clusters":total_clusters})
             # end_bounds = Feature(geometry=LineString([(ends.centroid.coords[:][0]), (ends.centroid.coords[:][0])]), properties={"radius":blen(ends.bounds), "index":i, "total_clusters":total_clusters})
             # start_bounds = Feature(geometry=circle(starts.bounds, starts.centroid), properties={"size":1, "index":i, "total_clusters":total_clusters, "location":"start"})
@@ -372,7 +297,7 @@ class Trajectory:
         import numpy as np
         from sklearn.neighbors import radius_neighbors_graph
 
-        start_pos, end_pos, paths = self.points()
+        start_pos, end_pos, paths = FileSplitter.points()
         del start_pos, end_pos
         gc.collect()
         neighbors = radius_neighbors_graph(paths, radius=0.005)
