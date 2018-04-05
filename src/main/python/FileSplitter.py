@@ -158,14 +158,13 @@ class FileSplitter:
     #     sys.exit()
 
     def get_next_line_until_max(self):
+        linectr = 0
         p = re.compile(sourceregex)
         for root, dirs, files in os.walk(sourcedir):
             selected_files = [f for f in files if p.match(f)]
             for file in selected_files:
-                with open(os.path.join(root, file)) as csvfile:
-                    readCSV = csv.reader(csvfile, delimiter=',')
-                    linectr = 0
-                    for row in readCSV:
+                with open(os.path.join(root, file)) as f:
+                    for row in f:
                         if 0 < linectr < MAX_LINES:
                             yield row
                         if linectr > MAX_LINES:
@@ -178,10 +177,8 @@ class FileSplitter:
         return bottom <= lat <= top and left <= lon <= right
 
     def process_line_for_points(self, row):
-        # row, start_pos, end_pos, paths = args
+        row = row.split(",")
         if self.is_wihin_range(float(row[6]), float(row[5])) and self.is_wihin_range(float(row[10]),float(row[9])):
-            # p_start = Point((float(row[6]),float(row[5])))
-            # p_end = Point((float(row[10]),float(row[9])))
             p_start = (float(row[6]), float(row[5]))
             p_end = (float(row[10]), float(row[9]))
             path = p_start + p_end
